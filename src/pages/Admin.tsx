@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,11 +14,6 @@ const Admin = () => {
   const [practiceName, setPracticeName] = useState("");
   const [loading, setLoading] = useState(false);
   const [tenants, setTenants] = useState<Array<{ tenant_id: string; practice_name: string; status: string }>>([]);
-  
-  // Load tenants on page load
-  useState(() => {
-    loadTenants();
-  });
   
   const loadTenants = async () => {
     try {
@@ -37,6 +32,11 @@ const Admin = () => {
       });
     }
   };
+  
+  // Use useEffect instead of useState for side effects
+  useEffect(() => {
+    loadTenants();
+  }, []);  // Empty dependency array means this runs once on mount
 
   const handleCreateTenant = async () => {
     if (!practiceName.trim()) {
