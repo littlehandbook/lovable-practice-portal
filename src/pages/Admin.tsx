@@ -43,7 +43,7 @@ const Admin = () => {
   const loadTenants = async () => {
     try {
       // Use the stored procedure sp_get_tenants() with proper typing
-      const { data, error } = await supabase.rpc('sp_get_tenants', {});
+      const { data, error } = await supabase.rpc('sp_get_tenants');
       
       if (error) throw error;
       // Handle null data case with empty array fallback
@@ -90,7 +90,7 @@ const Admin = () => {
       setPracticeName("");
       // If we have data, prepend the new tenant to the list
       if (data && Array.isArray(data) && data.length > 0) {
-        setTenants([data[0], ...tenants]);
+        setTenants([data[0] as Tenant, ...tenants]);
       } else {
         // Otherwise refresh the entire list
         loadTenants();
