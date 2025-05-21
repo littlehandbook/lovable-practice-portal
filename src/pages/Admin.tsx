@@ -20,10 +20,8 @@ const Admin = () => {
   
   const loadTenants = async () => {
     try {
-      const { data, error } = await supabase
-        .from('tbl_tenant_registry')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Use the stored procedure sp_get_tenants() instead of direct table access
+      const { data, error } = await supabase.rpc('sp_get_tenants');
       
       if (error) throw error;
       if (data) setTenants(data);
@@ -53,8 +51,9 @@ const Admin = () => {
 
     setLoading(true);
     try {
+      // Use the stored procedure sp_create_tenant instead of direct RPC call
       const { data, error } = await supabase.rpc(
-        'sp_create_tenant_database', 
+        'sp_create_tenant', 
         { p_practice_name: practiceName }
       );
       
@@ -62,7 +61,7 @@ const Admin = () => {
       
       toast({
         title: "Success!",
-        description: `Practice "${practiceName}" registered with tenant ID: ${data}`,
+        description: `Practice "${practiceName}" registered successfully`,
       });
       
       setPracticeName("");
@@ -81,10 +80,14 @@ const Admin = () => {
   const handleStatusToggle = async (tenantId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
     try {
-      const { error } = await supabase
-        .from('tbl_tenant_registry')
-        .update({ status: newStatus })
-        .eq('tenant_id', tenantId);
+      // Use the stored procedure sp_update_tenant_status instead of direct table update
+      const { error } = await supabase.rpc(
+        'sp_update_tenant_status',
+        { 
+          p_tenant_id: tenantId,
+          p_new_status: newStatus
+        }
+      );
         
       if (error) throw error;
       
