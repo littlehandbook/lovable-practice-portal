@@ -13,7 +13,10 @@ const Admin = () => {
   const navigate = useNavigate();
   const [practiceName, setPracticeName] = useState("");
   const [loading, setLoading] = useState(false);
-  const [tenants, setTenants] = useState<Array<{ tenant_id: string; practice_name: string; status: string }>>([]);
+  const [tenants, setTenants] = useState<Array<{ tenant_id: string; practice_name: string; status: string; created_at: string }>>([]);
+  const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
+  const [showSchemas, setShowSchemas] = useState(false);
+  const [schemas, setSchemas] = useState<string[]>([]);
   
   const loadTenants = async () => {
     try {
@@ -74,6 +77,35 @@ const Admin = () => {
       setLoading(false);
     }
   };
+  
+  const handleStatusToggle = async (tenantId: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
+    try {
+      const { error } = await supabase
+        .from('tbl_tenant_registry')
+        .update({ status: newStatus })
+        .eq('tenant_id', tenantId);
+        
+      if (error) throw error;
+      
+      toast({
+        title: "Status Updated",
+        description: `Practice status changed to: ${newStatus}`,
+      });
+      
+      loadTenants();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: `Failed to update status: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString();
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -133,11 +165,12 @@ const Admin = () => {
                     <div>
                       <h3 className="font-medium">{tenant.practice_name}</h3>
                       <p className="text-sm text-gray-500">ID: {tenant.tenant_id}</p>
+                      <p className="text-xs text-gray-400">Created: {formatDate(tenant.created_at)}</p>
                     </div>
                     <div>
                       <Sheet>
                         <SheetTrigger asChild>
-                          <Button variant="outline" size="sm">Details</Button>
+                          <Button variant="outline" size="sm">Manage</Button>
                         </SheetTrigger>
                         <SheetContent>
                           <SheetHeader>
@@ -160,13 +193,30 @@ const Admin = () => {
                               </div>
                             </div>
                             <div>
+                              <h4 className="text-sm font-medium">Created</h4>
+                              <p className="text-sm text-gray-500">{formatDate(tenant.created_at)}</p>
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-medium">Database Schema</h4>
+                              <p className="text-sm text-gray-500">tenant_{tenant.tenant_id}</p>
+                            </div>
+                            <div>
                               <h4 className="text-sm font-medium">Operations</h4>
-                              <div className="flex space-x-2 mt-2">
-                                <Button size="sm" variant={tenant.status === 'active' ? 'destructive' : 'outline'}>
+                              <div className="flex flex-wrap gap-2 mt-2">
+                                <Button 
+                                  size="sm" 
+                                  variant={tenant.status === 'active' ? 'destructive' : 'default'}
+                                  onClick={() => handleStatusToggle(tenant.tenant_id, tenant.status)}
+                                >
                                   {tenant.status === 'active' ? 'Suspend' : 'Activate'}
                                 </Button>
-                                <Button size="sm" variant="outline">Billing</Button>
-                                <Button size="sm" variant="outline">Audit Logs</Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  onClick={() => navigate(`/practice/${tenant.tenant_id}`)}
+                                >
+                                  Access Practice
+                                </Button>
                               </div>
                             </div>
                           </div>
