@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -9,22 +8,31 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
+// Define interface for tenant data returned by stored procedures
+interface Tenant {
+  tenant_id: string;
+  practice_name: string;
+  status: string;
+  created_at: string;
+}
+
 const Admin = () => {
   const navigate = useNavigate();
   const [practiceName, setPracticeName] = useState("");
   const [loading, setLoading] = useState(false);
-  const [tenants, setTenants] = useState<Array<{ tenant_id: string; practice_name: string; status: string; created_at: string }>>([]);
+  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [showSchemas, setShowSchemas] = useState(false);
   const [schemas, setSchemas] = useState<string[]>([]);
   
   const loadTenants = async () => {
     try {
-      // Use the stored procedure sp_get_tenants() instead of direct table access
-      const { data, error } = await supabase.rpc('sp_get_tenants');
+      // Use the stored procedure sp_get_tenants() with proper typing
+      const { data, error } = await supabase.rpc<Tenant[]>('sp_get_tenants');
       
       if (error) throw error;
-      if (data) setTenants(data);
+      // Handle null data case with empty array fallback
+      setTenants(data ?? []);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -51,8 +59,8 @@ const Admin = () => {
 
     setLoading(true);
     try {
-      // Use the stored procedure sp_create_tenant instead of direct RPC call
-      const { data, error } = await supabase.rpc(
+      // Use the stored procedure sp_create_tenant with proper typing
+      const { data, error } = await supabase.rpc<Tenant[]>(
         'sp_create_tenant', 
         { p_practice_name: practiceName }
       );
@@ -65,7 +73,13 @@ const Admin = () => {
       });
       
       setPracticeName("");
-      loadTenants();
+      // If we have data, prepend the new tenant to the list
+      if (data && data.length > 0) {
+        setTenants([data[0], ...tenants]);
+      } else {
+        // Otherwise refresh the entire list
+        loadTenants();
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -80,8 +94,8 @@ const Admin = () => {
   const handleStatusToggle = async (tenantId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
     try {
-      // Use the stored procedure sp_update_tenant_status instead of direct table update
-      const { error } = await supabase.rpc(
+      // Use the stored procedure sp_update_tenant_status with proper typing
+      const { error } = await supabase.rpc<void>(
         'sp_update_tenant_status',
         { 
           p_tenant_id: tenantId,
@@ -101,6 +115,28 @@ const Admin = () => {
       toast({
         title: "Error",
         description: `Failed to update status: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const runIsolationCheck = async () => {
+    try {
+      const { data, error } = await supabase.rpc<boolean>('sp_validate_tenant_isolation');
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Isolation Check",
+        description: data 
+          ? "Tenant isolation is working correctly!" 
+          : "WARNING: Tenant isolation check failed!",
+        variant: data ? "default" : "destructive",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: `Failed to run isolation check: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -234,6 +270,15 @@ const Admin = () => {
               </div>
             )}
           </CardContent>
+          <CardFooter className="justify-between">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={runIsolationCheck}
+            >
+              Test RLS Isolation
+            </Button>
+          </CardFooter>
         </Card>
       </div>
     </div>
