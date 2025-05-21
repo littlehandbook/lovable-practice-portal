@@ -43,7 +43,7 @@ const Admin = () => {
   const loadTenants = async () => {
     try {
       // Use the stored procedure sp_get_tenants() with proper typing
-      const { data, error } = await supabase.rpc<NoParams, Tenant[]>('sp_get_tenants', {});
+      const { data, error } = await supabase.rpc('sp_get_tenants', {});
       
       if (error) throw error;
       // Handle null data case with empty array fallback
@@ -75,7 +75,7 @@ const Admin = () => {
     setLoading(true);
     try {
       // Use the stored procedure sp_create_tenant with proper typing
-      const { data, error } = await supabase.rpc<CreateTenantParams, Tenant[]>(
+      const { data, error } = await supabase.rpc(
         'sp_create_tenant', 
         { p_practice_name: practiceName }
       );
@@ -89,7 +89,7 @@ const Admin = () => {
       
       setPracticeName("");
       // If we have data, prepend the new tenant to the list
-      if (data && data.length > 0) {
+      if (data && Array.isArray(data) && data.length > 0) {
         setTenants([data[0], ...tenants]);
       } else {
         // Otherwise refresh the entire list
@@ -110,7 +110,7 @@ const Admin = () => {
     const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
     try {
       // Use the stored procedure sp_update_tenant_status with proper typing
-      const { error } = await supabase.rpc<UpdateStatusParams, void>(
+      const { error } = await supabase.rpc(
         'sp_update_tenant_status',
         { 
           p_tenant_id: tenantId,
@@ -137,7 +137,7 @@ const Admin = () => {
 
   const runIsolationCheck = async () => {
     try {
-      const { data, error } = await supabase.rpc<NoParams, boolean>('sp_validate_tenant_isolation', {});
+      const { data, error } = await supabase.rpc('sp_validate_tenant_isolation', {});
       
       if (error) throw error;
       
