@@ -8,13 +8,27 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-// Define interface for tenant data returned by stored procedures
+// Define interfaces for RPC inputs & outputs
 interface Tenant {
   tenant_id: string;
   practice_name: string;
   status: string;
   created_at: string;
 }
+
+interface AuditLog {
+  log_id: string;
+  table_name: string;
+  operation: string;
+  changed_data: any;
+  changed_at: string;
+}
+
+// RPC-param types
+type NoParams = Record<string, never>;
+type CreateTenantParams = { p_practice_name: string };
+type UpdateStatusParams = { p_tenant_id: string; p_new_status: string };
+type FetchAuditLogsParams = { p_tenant_id: string };
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -24,11 +38,12 @@ const Admin = () => {
   const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
   const [showSchemas, setShowSchemas] = useState(false);
   const [schemas, setSchemas] = useState<string[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   
   const loadTenants = async () => {
     try {
       // Use the stored procedure sp_get_tenants() with proper typing
-      const { data, error } = await supabase.rpc<Tenant[]>('sp_get_tenants');
+      const { data, error } = await supabase.rpc<NoParams, Tenant[]>('sp_get_tenants', {});
       
       if (error) throw error;
       // Handle null data case with empty array fallback
@@ -60,7 +75,7 @@ const Admin = () => {
     setLoading(true);
     try {
       // Use the stored procedure sp_create_tenant with proper typing
-      const { data, error } = await supabase.rpc<Tenant[]>(
+      const { data, error } = await supabase.rpc<CreateTenantParams, Tenant[]>(
         'sp_create_tenant', 
         { p_practice_name: practiceName }
       );
@@ -95,7 +110,7 @@ const Admin = () => {
     const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
     try {
       // Use the stored procedure sp_update_tenant_status with proper typing
-      const { error } = await supabase.rpc<void>(
+      const { error } = await supabase.rpc<UpdateStatusParams, void>(
         'sp_update_tenant_status',
         { 
           p_tenant_id: tenantId,
@@ -122,7 +137,7 @@ const Admin = () => {
 
   const runIsolationCheck = async () => {
     try {
-      const { data, error } = await supabase.rpc<boolean>('sp_validate_tenant_isolation');
+      const { data, error } = await supabase.rpc<NoParams, boolean>('sp_validate_tenant_isolation', {});
       
       if (error) throw error;
       
