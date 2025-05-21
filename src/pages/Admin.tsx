@@ -47,7 +47,7 @@ const Admin = () => {
       
       if (error) throw error;
       // Handle null data case with empty array fallback
-      setTenants(data ?? []);
+      setTenants(data as Tenant[] ?? []);
     } catch (error: any) {
       toast({
         title: "Error",
