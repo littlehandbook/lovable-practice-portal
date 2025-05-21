@@ -9,19 +9,189 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      tbl_audit_logs: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json | null
+          entity: string
+          entity_id: string
+          id: string
+          tenant_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity: string
+          entity_id: string
+          id?: string
+          tenant_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json | null
+          entity?: string
+          entity_id?: string
+          id?: string
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tbl_audit_logs_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tbl_tenant_registry"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      tbl_billing: {
+        Row: {
+          amount: number
+          client_id: string
+          created_at: string
+          id: string
+          status: string
+          tenant_id: string | null
+        }
+        Insert: {
+          amount: number
+          client_id: string
+          created_at?: string
+          id?: string
+          status?: string
+          tenant_id?: string | null
+        }
+        Update: {
+          amount?: number
+          client_id?: string
+          created_at?: string
+          id?: string
+          status?: string
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tbl_billing_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tbl_tenant_registry"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
+      tbl_tenant_registry: {
+        Row: {
+          created_at: string
+          practice_name: string
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          practice_name: string
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          practice_name?: string
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      dblink: {
+        Args: { "": string }
+        Returns: Record<string, unknown>[]
+      }
+      dblink_cancel_query: {
+        Args: { "": string }
+        Returns: string
+      }
+      dblink_close: {
+        Args: { "": string }
+        Returns: string
+      }
+      dblink_connect: {
+        Args: { "": string }
+        Returns: string
+      }
+      dblink_connect_u: {
+        Args: { "": string }
+        Returns: string
+      }
+      dblink_current_query: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      dblink_disconnect: {
+        Args: Record<PropertyKey, never> | { "": string }
+        Returns: string
+      }
+      dblink_error_message: {
+        Args: { "": string }
+        Returns: string
+      }
+      dblink_exec: {
+        Args: { "": string }
+        Returns: string
+      }
+      dblink_fdw_validator: {
+        Args: { options: string[]; catalog: unknown }
+        Returns: undefined
+      }
+      dblink_get_connections: {
+        Args: Record<PropertyKey, never>
+        Returns: string[]
+      }
+      dblink_get_notify: {
+        Args: Record<PropertyKey, never> | { conname: string }
+        Returns: Record<string, unknown>[]
+      }
+      dblink_get_pkey: {
+        Args: { "": string }
+        Returns: Database["public"]["CompositeTypes"]["dblink_pkey_results"][]
+      }
+      dblink_get_result: {
+        Args: { "": string }
+        Returns: Record<string, unknown>[]
+      }
+      dblink_is_busy: {
+        Args: { "": string }
+        Returns: number
+      }
+      purge_old_audit_logs: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      refresh_billing_summary: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      sp_create_tenant_database: {
+        Args: { p_practice_name: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
     }
     CompositeTypes: {
-      [_ in never]: never
+      dblink_pkey_results: {
+        position: number | null
+        colname: string | null
+      }
     }
   }
 }
