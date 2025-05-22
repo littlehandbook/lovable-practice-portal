@@ -48,6 +48,8 @@ const Register = () => {
     }
 
     try {
+      console.log("Starting registration process");
+      
       // 1. Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
@@ -60,13 +62,33 @@ const Register = () => {
         }
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        console.error("Auth error:", authError);
+        throw authError;
+      }
+      
+      console.log("Auth signup successful:", authData);
       
       if (!authData.user) {
+        console.error("No user data returned");
         throw new Error("Failed to create user account");
       }
 
-      // 2. Create therapist profile using the updated stored procedure
+      // Skip the therapist profile creation if the user already exists
+      // Supabase will handle this gracefully by returning an error message about the user existing
+      if (authData.user.identities && authData.user.identities.length === 0) {
+        console.log("User already exists, skipping profile creation");
+        
+        toast({
+          title: "Account exists",
+          description: "An account with this email already exists. Please check your email or try logging in.",
+        });
+        
+        navigate("/auth/login");
+        return;
+      }
+
+      // 2. Create therapist profile using the stored procedure
       const { error: dbError } = await supabase.rpc(
         'sp_register_therapist',
         {
@@ -78,7 +100,21 @@ const Register = () => {
         }
       );
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error("Database error:", dbError);
+        
+        // Special handling for duplicate key error
+        if (dbError.code === '23505') {
+          toast({
+            title: "Account exists",
+            description: "An account with this email already exists. Please check your email or try logging in.",
+          });
+          navigate("/auth/login");
+          return;
+        }
+        
+        throw dbError;
+      }
 
       toast({
         title: "Registration successful",
@@ -88,9 +124,19 @@ const Register = () => {
       navigate("/auth/verify-email");
     } catch (error: any) {
       console.error("Registration error:", error);
+      
+      // User friendly error message
+      let errorMessage = error.message || "Failed to create account";
+      
+      // Handle specific error codes
+      if (error.code === "23505" || errorMessage.includes("already registered")) {
+        errorMessage = "This email is already registered. Please try logging in instead.";
+        navigate("/auth/login");
+      }
+      
       toast({
         title: "Registration failed",
-        description: error.message || "Failed to create account",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
