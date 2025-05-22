@@ -6,7 +6,20 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://kuupszdkcowmyjycnkgh.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt1dXBzemRrY293bXlqeWNua2doIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDc4NDYyMjEsImV4cCI6MjA2MzQyMjIyMX0.WPqdaaeXubwtP_vu0YjvXQkV9xY5Gnm5JLXu-a6olj4";
 
+// Create an augmented type that extends the Database type to include our custom functions
+type AugmentedSupabaseClient = ReturnType<typeof createClient<Database>> & {
+  // Add a type-safe overload for our custom RPC functions
+  rpc<T = any, R = any>(
+    fn: string,
+    params?: T
+  ): Promise<{ data: R; error: null } | { data: null; error: any }>;
+};
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+// Create the client with the base Database type
+const baseClient = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+// Export it as the augmented type to support our custom RPC functions
+export const supabase = baseClient as AugmentedSupabaseClient;

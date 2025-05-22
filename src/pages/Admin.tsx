@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -24,12 +25,6 @@ interface AuditLog {
   changed_at: string;
 }
 
-// RPC-param types
-type NoParams = Record<string, never>;
-type CreateTenantParams = { p_practice_name: string };
-type UpdateStatusParams = { p_tenant_id: string; p_new_status: string };
-type FetchAuditLogsParams = { p_tenant_id: string };
-
 const Admin = () => {
   const navigate = useNavigate();
   const [practiceName, setPracticeName] = useState("");
@@ -42,12 +37,15 @@ const Admin = () => {
   
   const loadTenants = async () => {
     try {
-      // Use the stored procedure sp_get_tenants() with proper typing
-      const { data, error } = await supabase.rpc('sp_get_tenants');
+      // Use type assertion to work around the TypeScript constraints
+      const { data, error } = await supabase.rpc(
+        'sp_get_tenants' as any
+      );
       
       if (error) throw error;
-      // Handle null data case with empty array fallback
-      setTenants(data as Tenant[] ?? []);
+      
+      // Handle null data case with empty array fallback and type assertion
+      setTenants((data as Tenant[]) ?? []);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -74,9 +72,9 @@ const Admin = () => {
 
     setLoading(true);
     try {
-      // Use the stored procedure sp_create_tenant with proper typing
+      // Use type assertion to work around the TypeScript constraints
       const { data, error } = await supabase.rpc(
-        'sp_create_tenant', 
+        'sp_create_tenant' as any, 
         { p_practice_name: practiceName }
       );
       
@@ -90,7 +88,7 @@ const Admin = () => {
       setPracticeName("");
       // If we have data, prepend the new tenant to the list
       if (data && Array.isArray(data) && data.length > 0) {
-        setTenants([data[0] as Tenant, ...tenants]);
+        setTenants([(data[0] as Tenant), ...tenants]);
       } else {
         // Otherwise refresh the entire list
         loadTenants();
@@ -109,9 +107,9 @@ const Admin = () => {
   const handleStatusToggle = async (tenantId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
     try {
-      // Use the stored procedure sp_update_tenant_status with proper typing
+      // Use type assertion to work around the TypeScript constraints
       const { error } = await supabase.rpc(
-        'sp_update_tenant_status',
+        'sp_update_tenant_status' as any,
         { 
           p_tenant_id: tenantId,
           p_new_status: newStatus
@@ -137,7 +135,11 @@ const Admin = () => {
 
   const runIsolationCheck = async () => {
     try {
-      const { data, error } = await supabase.rpc('sp_validate_tenant_isolation', {});
+      // Use type assertion to work around the TypeScript constraints
+      const { data, error } = await supabase.rpc(
+        'sp_validate_tenant_isolation' as any,
+        {}
+      );
       
       if (error) throw error;
       
