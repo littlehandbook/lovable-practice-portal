@@ -293,6 +293,16 @@ export type Database = {
           email_verified: boolean
         }[]
       }
+      sp_register_therapist: {
+        Args: {
+          p_auth_id: string
+          p_email: string
+          p_full_name: string
+          p_practice_name?: string
+          p_license_number?: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

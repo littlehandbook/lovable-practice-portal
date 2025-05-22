@@ -48,20 +48,30 @@ const Register = () => {
     }
 
     try {
-      // Create auth user
+      // 1. Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: {
+            full_name: formData.fullName
+          }
+        }
       });
 
       if (authError) throw authError;
+      
+      if (!authData.user) {
+        throw new Error("Failed to create user account");
+      }
 
-      // Create therapist profile
-      const { data: therapistData, error: dbError } = await supabase.rpc(
-        'sp_register_therapist' as any, 
+      // 2. Create therapist profile using the updated stored procedure
+      const { error: dbError } = await supabase.rpc(
+        'sp_register_therapist',
         {
+          p_auth_id: authData.user.id,
           p_email: formData.email,
-          p_password: formData.password,
           p_full_name: formData.fullName,
           p_practice_name: formData.practiceName || null,
           p_license_number: formData.licenseNumber || null

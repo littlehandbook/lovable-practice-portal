@@ -26,10 +26,15 @@ const Login = () => {
       if (error) throw error;
 
       // Audit the login
-      await supabase.rpc('sp_audit_login' as any, {
-        p_therapist_id: data.user?.id,
-        p_action: 'LOGIN_SUCCESS'
-      });
+      try {
+        await supabase.rpc('sp_audit_login', {
+          p_therapist_id: data.user?.id,
+          p_action: 'LOGIN_SUCCESS'
+        });
+      } catch (auditError) {
+        // Don't block login if audit fails
+        console.error("Failed to log login attempt:", auditError);
+      }
 
       toast({
         title: "Success",
@@ -47,7 +52,7 @@ const Login = () => {
       
       // Audit failed login attempt
       try {
-        await supabase.rpc('sp_audit_login' as any, {
+        await supabase.rpc('sp_audit_login', {
           p_therapist_id: null,
           p_action: 'LOGIN_FAILED'
         });

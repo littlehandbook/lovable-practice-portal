@@ -15,11 +15,11 @@ type AugmentedSupabaseClient = ReturnType<typeof createClient<Database>> & {
   ): Promise<{ data: R; error: null } | { data: null; error: any }>;
 };
 
-// Import the supabase client like this:
-// import { supabase } from "@/integrations/supabase/client";
-
-// Create the client with the base Database type
-const baseClient = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-
-// Export it as the augmented type to support our custom RPC functions
-export const supabase = baseClient as AugmentedSupabaseClient;
+// Export the client with proper configuration for auth
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    storage: localStorage
+  }
+}) as AugmentedSupabaseClient;
