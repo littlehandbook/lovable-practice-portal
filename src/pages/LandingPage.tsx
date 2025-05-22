@@ -2,8 +2,12 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Computer, User, Users } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const LandingPage = () => {
+  const { user, signOut } = useAuth();
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       {/* Header */}
@@ -15,20 +19,36 @@ const LandingPage = () => {
           <nav>
             <ul className="flex space-x-6">
               <li>
-                <a href="/admin" className="text-gray-600 hover:text-teal-600 text-sm font-medium">
+                <Link to="/admin" className="text-gray-600 hover:text-teal-600 text-sm font-medium">
                   Admin Portal
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/practice" className="text-gray-600 hover:text-teal-600 text-sm font-medium">
+                <Link to="/practice" className="text-gray-600 hover:text-teal-600 text-sm font-medium">
                   Practice Portal
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/client" className="text-gray-600 hover:text-teal-600 text-sm font-medium">
+                <Link to="/client" className="text-gray-600 hover:text-teal-600 text-sm font-medium">
                   Client Login
-                </a>
+                </Link>
               </li>
+              {user ? (
+                <li>
+                  <button 
+                    onClick={signOut}
+                    className="text-gray-600 hover:text-teal-600 text-sm font-medium"
+                  >
+                    Sign Out
+                  </button>
+                </li>
+              ) : (
+                <li>
+                  <Link to="/auth/login" className="text-gray-600 hover:text-teal-600 text-sm font-medium">
+                    Sign In
+                  </Link>
+                </li>
+              )}
             </ul>
           </nav>
         </div>
@@ -43,11 +63,15 @@ const LandingPage = () => {
           Streamline your practice with our comprehensive therapy management solution. Manage clients, sessions, and more in one secure platform.
         </p>
         <div className="flex flex-wrap justify-center gap-4">
-          <Button size="lg" className="bg-teal-500 hover:bg-teal-600 text-white">
-            For Therapists
+          <Button size="lg" className="bg-teal-500 hover:bg-teal-600 text-white" asChild>
+            <Link to="/auth/register">
+              For Therapists
+            </Link>
           </Button>
-          <Button size="lg" variant="outline" className="border-teal-500 text-teal-500 hover:bg-teal-50">
-            Client Portal
+          <Button size="lg" variant="outline" className="border-teal-500 text-teal-500 hover:bg-teal-50" asChild>
+            <Link to="/client">
+              Client Portal
+            </Link>
           </Button>
         </div>
       </section>
@@ -67,12 +91,12 @@ const LandingPage = () => {
               </p>
             </CardContent>
             <CardFooter className="flex justify-center pt-2 pb-6">
-              <a
-                href="/admin"
+              <Link
+                to="/admin"
                 className="text-teal-500 hover:text-teal-700 font-medium flex items-center"
               >
                 Access Admin Portal
-              </a>
+              </Link>
             </CardFooter>
           </Card>
 
@@ -88,12 +112,12 @@ const LandingPage = () => {
               </p>
             </CardContent>
             <CardFooter className="flex justify-center pt-2 pb-6">
-              <a
-                href="/practice"
+              <Link
+                to={user ? "/practice" : "/auth/login"}
                 className="text-teal-500 hover:text-teal-700 font-medium flex items-center"
               >
-                Access Therapist Portal
-              </a>
+                {user ? "Access Therapist Portal" : "Login to Access"}
+              </Link>
             </CardFooter>
           </Card>
 
@@ -109,12 +133,12 @@ const LandingPage = () => {
               </p>
             </CardContent>
             <CardFooter className="flex justify-center pt-2 pb-6">
-              <a
-                href="/client"
+              <Link
+                to="/client"
                 className="text-teal-500 hover:text-teal-700 font-medium flex items-center"
               >
                 Access Client Portal
-              </a>
+              </Link>
             </CardFooter>
           </Card>
         </div>
