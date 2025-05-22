@@ -9,6 +9,50 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      tbl_audit_log: {
+        Row: {
+          action: string
+          details: Json | null
+          id: string
+          ip_address: unknown | null
+          resource_id: string | null
+          resource_type: string | null
+          therapist_id: string | null
+          timestamp: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          details?: Json | null
+          id?: string
+          ip_address?: unknown | null
+          resource_id?: string | null
+          resource_type?: string | null
+          therapist_id?: string | null
+          timestamp?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          details?: Json | null
+          id?: string
+          ip_address?: unknown | null
+          resource_id?: string | null
+          resource_type?: string | null
+          therapist_id?: string | null
+          timestamp?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tbl_audit_log_therapist_id_fkey"
+            columns: ["therapist_id"]
+            isOneToOne: false
+            referencedRelation: "tbl_therapists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tbl_audit_logs: {
         Row: {
           action: string
@@ -106,6 +150,48 @@ export type Database = {
         }
         Relationships: []
       }
+      tbl_therapists: {
+        Row: {
+          created_at: string | null
+          email: string
+          email_verified: boolean | null
+          email_verified_at: string | null
+          full_name: string
+          id: string
+          is_active: boolean | null
+          license_number: string | null
+          phone: string | null
+          practice_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          email_verified?: boolean | null
+          email_verified_at?: string | null
+          full_name: string
+          id: string
+          is_active?: boolean | null
+          license_number?: string | null
+          phone?: string | null
+          practice_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          email_verified?: boolean | null
+          email_verified_at?: string | null
+          full_name?: string
+          id?: string
+          is_active?: boolean | null
+          license_number?: string | null
+          phone?: string | null
+          practice_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -179,9 +265,33 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      sp_audit_login: {
+        Args: {
+          p_therapist_id: string
+          p_action: string
+          p_ip_address?: unknown
+          p_user_agent?: string
+        }
+        Returns: undefined
+      }
+      sp_audit_registration: {
+        Args: { p_therapist_id: string; p_details?: Json }
+        Returns: undefined
+      }
       sp_create_tenant_database: {
         Args: { p_practice_name: string }
         Returns: string
+      }
+      sp_get_therapist_by_email: {
+        Args: { p_email: string }
+        Returns: {
+          id: string
+          email: string
+          full_name: string
+          practice_name: string
+          is_active: boolean
+          email_verified: boolean
+        }[]
       }
     }
     Enums: {
