@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -26,6 +25,16 @@ interface PagePermission {
   page_path: string;
   page_name: string;
   roles: string[];
+}
+
+// Type for database response
+interface DatabaseUser {
+  user_id: string;
+  email: string;
+  role: string;
+  created_at: string;
+  first_name: string;
+  last_name: string;
 }
 
 export function UsersTab() {
@@ -67,7 +76,16 @@ export function UsersTab() {
         setUsersError('Failed to load users');
         setUsers([]);
       } else {
-        setUsers(data || []);
+        // Convert database response to properly typed User objects
+        const typedUsers: User[] = (data as DatabaseUser[] || []).map(dbUser => ({
+          user_id: dbUser.user_id,
+          email: dbUser.email,
+          role: dbUser.role as 'owner' | 'admin' | 'practitioner', // Type assertion since we control the data
+          created_at: dbUser.created_at,
+          first_name: dbUser.first_name,
+          last_name: dbUser.last_name
+        }));
+        setUsers(typedUsers);
       }
     } catch (error) {
       console.error('Error fetching users:', error);
