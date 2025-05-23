@@ -1,16 +1,16 @@
-
 import React, { useState } from 'react';
 import { DashboardLayout } from '@/components/layouts/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { ChevronLeft, ChevronRight, Plus, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Clock, User } from 'lucide-react';
 
 interface AvailabilitySlot {
   id: number;
@@ -20,19 +20,35 @@ interface AvailabilitySlot {
   enabled: boolean;
 }
 
+interface SessionBooking {
+  id: number;
+  clientName: string;
+  time: string;
+  day: string;
+  duration: number;
+  type: 'session' | 'consultation';
+}
+
 const CalendarPage = () => {
   const [date, setDate] = useState<Date>(new Date());
   const [view, setView] = useState<'day' | 'week' | 'month'>('week');
   const [openAvailabilityDialog, setOpenAvailabilityDialog] = useState(false);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
+  const [openBookingDialog, setOpenBookingDialog] = useState(false);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<{time: string, day: string} | null>(null);
+  const [bookingForm, setBookingForm] = useState({
+    clientName: '',
+    sessionType: 'session',
+    duration: 50,
+    notes: ''
+  });
   const { toast } = useToast();
   
   // Mock data for scheduled sessions
-  const scheduledSessions = [
-    { id: 1, clientName: 'Jane Doe', time: '09:00', duration: 50 },
-    { id: 2, clientName: 'John Smith', time: '11:00', duration: 50 },
-    { id: 3, clientName: 'Emily Johnson', time: '14:00', duration: 50 },
-  ];
+  const [scheduledSessions, setScheduledSessions] = useState<SessionBooking[]>([
+    { id: 1, clientName: 'Jane Doe', time: '09:00', day: 'Monday', duration: 50, type: 'session' },
+    { id: 2, clientName: 'John Smith', time: '11:00', day: 'Tuesday', duration: 50, type: 'session' },
+    { id: 3, clientName: 'Emily Johnson', time: '14:00', day: 'Wednesday', duration: 50, type: 'consultation' },
+  ]);
   
   // Availability state with enabled/disabled functionality
   const [availabilitySlots, setAvailabilitySlots] = useState<AvailabilitySlot[]>([
@@ -49,6 +65,59 @@ const CalendarPage = () => {
   
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
+  const handleSlotSelect = (time: string, day: string) => {
+    // Check if slot is already booked
+    const isBooked = scheduledSessions.some(session => session.time === time && session.day === day);
+    if (isBooked) {
+      toast({
+        title: 'Slot Unavailable',
+        description: 'This time slot is already booked.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setSelectedTimeSlot({ time, day });
+    setOpenBookingDialog(true);
+  };
+
+  const handleBookSession = () => {
+    if (!selectedTimeSlot || !bookingForm.clientName.trim()) {
+      toast({
+        title: 'Missing Information',
+        description: 'Please fill in all required fields.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const newSession: SessionBooking = {
+      id: Date.now(),
+      clientName: bookingForm.clientName,
+      time: selectedTimeSlot.time,
+      day: selectedTimeSlot.day,
+      duration: bookingForm.duration,
+      type: bookingForm.sessionType as 'session' | 'consultation'
+    };
+
+    setScheduledSessions(prev => [...prev, newSession]);
+    
+    toast({
+      title: 'Session Booked',
+      description: `Session with ${bookingForm.clientName} scheduled for ${selectedTimeSlot.day} at ${selectedTimeSlot.time}.`,
+    });
+
+    // Reset form and close dialog
+    setBookingForm({
+      clientName: '',
+      sessionType: 'session',
+      duration: 50,
+      notes: ''
+    });
+    setSelectedTimeSlot(null);
+    setOpenBookingDialog(false);
+  };
+
   const handleAvailabilityChange = (id: number, field: keyof AvailabilitySlot, value: string | boolean) => {
     setAvailabilitySlots(prev => prev.map(slot => 
       slot.id === id ? { ...slot, [field]: value } : slot
@@ -56,8 +125,6 @@ const CalendarPage = () => {
   };
 
   const handleSaveAvailability = () => {
-    // Here you would normally save to your backend/database
-    // For now, we'll just show a success message
     console.log('Saving availability:', availabilitySlots);
     
     toast({
@@ -112,12 +179,12 @@ const CalendarPage = () => {
     }
   };
 
-  const isSessionScheduled = (time: string) => {
-    return scheduledSessions.some(session => session.time === time);
+  const isSessionScheduled = (time: string, day: string) => {
+    return scheduledSessions.some(session => session.time === time && session.day === day);
   };
 
-  const getSessionForTime = (time: string) => {
-    return scheduledSessions.find(session => session.time === time);
+  const getSessionForTime = (time: string, day: string) => {
+    return scheduledSessions.find(session => session.time === time && session.day === day);
   };
 
   return (
@@ -186,20 +253,22 @@ const CalendarPage = () => {
                     <div key={time} className="grid grid-cols-6 border-b">
                       <div className="p-4 text-center text-gray-500 border-r">{time}</div>
                       {daysOfWeek.map((day) => {
-                        // Here we'd normally check if a session exists at this time/day
-                        // For simplicity, we'll just randomly place some sessions
-                        const hasSession = Math.random() > 0.8;
+                        const session = getSessionForTime(time, day);
+                        const hasSession = !!session;
+                        
                         return (
                           <div key={`${day}-${time}`} className="p-2 border-r relative min-h-[80px]">
                             {hasSession ? (
                               <div className="absolute inset-1 bg-teal-100 border border-teal-200 rounded p-2">
-                                <div className="text-sm font-medium text-teal-800">Client Session</div>
-                                <div className="text-xs text-teal-600">{time} - {parseInt(time) + 1}:00</div>
+                                <div className="text-sm font-medium text-teal-800">{session.clientName}</div>
+                                <div className="text-xs text-teal-600">{time} - {parseInt(time.split(':')[0]) + 1}:00</div>
+                                <div className="text-xs text-teal-500 capitalize">{session.type}</div>
                               </div>
                             ) : (
                               <button 
-                                className="absolute inset-1 border border-dashed border-gray-300 rounded flex items-center justify-center hover:bg-gray-50"
-                                aria-label="Add session"
+                                className="absolute inset-1 border border-dashed border-gray-300 rounded flex items-center justify-center hover:bg-gray-50 hover:border-teal-300 transition-colors"
+                                onClick={() => handleSlotSelect(time, day)}
+                                aria-label={`Book session for ${day} at ${time}`}
                               >
                                 <Plus className="h-4 w-4 text-gray-400" />
                               </button>
@@ -216,7 +285,7 @@ const CalendarPage = () => {
             {view === 'day' && (
               <div className="space-y-2">
                 {timeSlots.map((time) => {
-                  const session = getSessionForTime(time);
+                  const session = getSessionForTime(time, formatDateRange().split(',')[0]);
                   return (
                     <div key={time} className="flex border rounded-lg overflow-hidden">
                       <div className="w-24 p-4 bg-gray-50 text-center border-r">
@@ -226,12 +295,14 @@ const CalendarPage = () => {
                         {session ? (
                           <div className="bg-teal-100 border border-teal-200 rounded p-3">
                             <div className="text-sm font-medium text-teal-800">{session.clientName}</div>
-                            <div className="text-xs text-teal-600">{time} - {parseInt(time) + 1}:00 ({session.duration} min)</div>
+                            <div className="text-xs text-teal-600">{time} - {parseInt(time.split(':')[0]) + 1}:00 ({session.duration} min)</div>
+                            <div className="text-xs text-teal-500 capitalize">{session.type}</div>
                           </div>
                         ) : (
                           <button 
                             className="w-full h-full border border-dashed border-gray-300 rounded flex items-center justify-center hover:bg-gray-50 min-h-[60px]"
-                            aria-label="Add session"
+                            onClick={() => handleSlotSelect(time, formatDateRange().split(',')[0])}
+                            aria-label={`Book session for ${time}`}
                           >
                             <Plus className="h-4 w-4 text-gray-400" />
                           </button>
@@ -245,6 +316,75 @@ const CalendarPage = () => {
           </CardContent>
         </Card>
       </div>
+      
+      {/* Book Session Dialog */}
+      <Dialog open={openBookingDialog} onOpenChange={setOpenBookingDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Book New Session</DialogTitle>
+            <DialogDescription>
+              {selectedTimeSlot && `Schedule a session for ${selectedTimeSlot.day} at ${selectedTimeSlot.time}`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="clientName">Client Name *</Label>
+              <Input
+                id="clientName"
+                value={bookingForm.clientName}
+                onChange={(e) => setBookingForm(prev => ({ ...prev, clientName: e.target.value }))}
+                placeholder="Enter client name"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="sessionType">Session Type</Label>
+              <Select value={bookingForm.sessionType} onValueChange={(value) => setBookingForm(prev => ({ ...prev, sessionType: value }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="session">Therapy Session</SelectItem>
+                  <SelectItem value="consultation">Consultation</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="duration">Duration (minutes)</Label>
+              <Select value={bookingForm.duration.toString()} onValueChange={(value) => setBookingForm(prev => ({ ...prev, duration: parseInt(value) }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="30">30 minutes</SelectItem>
+                  <SelectItem value="45">45 minutes</SelectItem>
+                  <SelectItem value="50">50 minutes</SelectItem>
+                  <SelectItem value="60">60 minutes</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes (optional)</Label>
+              <Input
+                id="notes"
+                value={bookingForm.notes}
+                onChange={(e) => setBookingForm(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="Session notes or special instructions"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenBookingDialog(false)}>
+              Cancel
+            </Button>
+            <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleBookSession}>
+              Book Session
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       {/* Set Availability Dialog */}
       <Dialog open={openAvailabilityDialog} onOpenChange={setOpenAvailabilityDialog}>
