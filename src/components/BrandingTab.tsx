@@ -111,7 +111,7 @@ export function BrandingTab() {
             <Label htmlFor="practice_name">Practice Name</Label>
             <Input
               id="practice_name"
-              value={formData.practice_name}
+              value={formData.practice_name || ''}
               onChange={(e) => handleFormChange('practice_name', e.target.value)}
               placeholder="Enter your practice name"
               disabled={saving}
