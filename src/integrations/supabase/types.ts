@@ -129,6 +129,69 @@ export type Database = {
           },
         ]
       }
+      tbl_config_audit: {
+        Row: {
+          audit_id: string
+          change_hash: string
+          created_at: string
+          key: string
+          new_value: Json
+          old_value: Json | null
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          audit_id?: string
+          change_hash: string
+          created_at?: string
+          key: string
+          new_value: Json
+          old_value?: Json | null
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          audit_id?: string
+          change_hash?: string
+          created_at?: string
+          key?: string
+          new_value?: Json
+          old_value?: Json | null
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tbl_configurations: {
+        Row: {
+          key: string
+          tenant_id: string
+          type: string
+          updated_at: string
+          updated_by: string
+          value: Json
+          version: number
+        }
+        Insert: {
+          key: string
+          tenant_id: string
+          type?: string
+          updated_at?: string
+          updated_by: string
+          value: Json
+          version?: number
+        }
+        Update: {
+          key?: string
+          tenant_id?: string
+          type?: string
+          updated_at?: string
+          updated_by?: string
+          value?: Json
+          version?: number
+        }
+        Relationships: []
+      }
       tbl_tenant_registry: {
         Row: {
           created_at: string
@@ -282,6 +345,17 @@ export type Database = {
         Args: { p_practice_name: string }
         Returns: string
       }
+      sp_get_config: {
+        Args: { p_tenant: string }
+        Returns: {
+          key: string
+          value: Json
+          type: string
+          version: number
+          updated_at: string
+          updated_by: string
+        }[]
+      }
       sp_get_therapist_by_email: {
         Args: { p_email: string }
         Returns: {
@@ -302,6 +376,10 @@ export type Database = {
           p_license_number?: string
         }
         Returns: string
+      }
+      sp_update_config: {
+        Args: { p_tenant: string; p_key: string; p_value: Json; p_user: string }
+        Returns: undefined
       }
     }
     Enums: {

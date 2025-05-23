@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ClientLayout } from '@/components/layouts/ClientLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -9,6 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
+import { ConfigurationTab } from '@/components/ConfigurationTab';
 
 const ClientSettingsPage = () => {
   const { user } = useAuth();
@@ -29,10 +29,11 @@ const ClientSettingsPage = () => {
         <h1 className="text-2xl font-bold tracking-tight">Account Settings</h1>
         
         <Tabs defaultValue={activeTab} value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-3 w-full max-w-md">
+          <TabsList className="grid grid-cols-4 w-full max-w-lg">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            <TabsTrigger value="preferences">Preferences</TabsTrigger>
           </TabsList>
           
           <TabsContent value="profile" className="space-y-6">
@@ -286,6 +287,10 @@ const ClientSettingsPage = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+          
+          <TabsContent value="preferences" className="space-y-6">
+            <ConfigurationTab />
           </TabsContent>
         </Tabs>
       </div>
