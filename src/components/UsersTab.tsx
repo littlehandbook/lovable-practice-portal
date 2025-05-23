@@ -345,8 +345,13 @@ export function UsersTab() {
     return pagePermissions.filter(p => p.page_path === pagePath);
   };
 
+  // Fixed function to remove duplicates and provide unique roles
   const getAvailableRoles = () => {
-    return ['owner', 'admin', 'practitioner', ...roles.map(r => r.role_name)];
+    const baseRoles = ['owner', 'admin', 'practitioner'];
+    const customRoles = roles.map(r => r.role_name);
+    
+    // Remove duplicates by creating a Set and converting back to array
+    return [...new Set([...baseRoles, ...customRoles])];
   };
 
   if (loading && rolesLoading) {
@@ -610,7 +615,11 @@ export function UsersTab() {
                     <SelectContent>
                       {Object.keys(PAGE_COMPONENTS).map((pagePath) => (
                         <SelectItem key={pagePath} value={pagePath}>
-                          {pagePermissions.find(p => p.page_path === pagePath)?.page_name || pagePath}
+                          {pagePath === '/practice' ? 'Dashboard' :
+                           pagePath === '/practice/clients' ? 'Clients' :
+                           pagePath === '/practice/settings' ? 'Settings' :
+                           pagePath === '/practice/calendar' ? 'Calendar' :
+                           pagePath}
                         </SelectItem>
                       ))}
                     </SelectContent>
