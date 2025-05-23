@@ -129,6 +129,57 @@ export type Database = {
           },
         ]
       }
+      tbl_client_goals: {
+        Row: {
+          client_id: string
+          created_at: string
+          created_by: string
+          emotional_mental: string | null
+          environmental: string | null
+          financial: string | null
+          id: string
+          intellectual_occupational: string | null
+          physical: string | null
+          social_relational: string | null
+          spiritual: string | null
+          tenant_id: string
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          created_by: string
+          emotional_mental?: string | null
+          environmental?: string | null
+          financial?: string | null
+          id?: string
+          intellectual_occupational?: string | null
+          physical?: string | null
+          social_relational?: string | null
+          spiritual?: string | null
+          tenant_id: string
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          created_by?: string
+          emotional_mental?: string | null
+          environmental?: string | null
+          financial?: string | null
+          id?: string
+          intellectual_occupational?: string | null
+          physical?: string | null
+          social_relational?: string | null
+          spiritual?: string | null
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: []
+      }
       tbl_config_audit: {
         Row: {
           audit_id: string
@@ -345,6 +396,18 @@ export type Database = {
         Args: { p_practice_name: string }
         Returns: string
       }
+      sp_get_client_goals: {
+        Args: { p_client_id: string; p_tenant_id: string }
+        Returns: {
+          emotional_mental: string
+          physical: string
+          social_relational: string
+          spiritual: string
+          environmental: string
+          intellectual_occupational: string
+          financial: string
+        }[]
+      }
       sp_get_config: {
         Args: { p_tenant: string }
         Returns: {
@@ -379,6 +442,21 @@ export type Database = {
       }
       sp_update_config: {
         Args: { p_tenant: string; p_key: string; p_value: Json; p_user: string }
+        Returns: undefined
+      }
+      sp_upsert_client_goals: {
+        Args: {
+          p_client_id: string
+          p_tenant_id: string
+          p_emotional_mental: string
+          p_physical: string
+          p_social_relational: string
+          p_spiritual: string
+          p_environmental: string
+          p_intellectual_occupational: string
+          p_financial: string
+          p_user_id: string
+        }
         Returns: undefined
       }
     }

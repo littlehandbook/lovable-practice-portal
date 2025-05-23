@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,19 @@ const goalDescriptions = {
   financial: "Develop healthy money management habits, budgeting skills, financial planning, and work toward financial stability and goals."
 };
 
+// Helper function to check if a string is a valid UUID
+const isValidUUID = (str: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+};
+
+// Helper function to generate a UUID from a simple ID (for demo purposes)
+const generateUUIDFromId = (id: string): string => {
+  // For demo purposes, create a predictable UUID from the simple ID
+  const paddedId = id.padStart(8, '0');
+  return `${paddedId}-0000-4000-8000-000000000000`;
+};
+
 export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -55,6 +69,9 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
 
   const tenantId = user?.id || '00000000-0000-0000-0000-000000000000';
 
+  // Convert clientId to UUID format if needed
+  const clientUUID = isValidUUID(clientId) ? clientId : generateUUIDFromId(clientId);
+
   useEffect(() => {
     fetchGoals();
   }, [clientId, tenantId]);
@@ -64,10 +81,10 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
     setError(null);
     
     try {
-      console.log('Fetching goals for client:', clientId, 'tenant:', tenantId);
+      console.log('Fetching goals for client:', clientUUID, 'tenant:', tenantId);
       
       const { data, error } = await supabase.rpc('sp_get_client_goals', {
-        p_client_id: clientId,
+        p_client_id: clientUUID,
         p_tenant_id: tenantId
       });
 
@@ -131,14 +148,14 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
     
     try {
       console.log('Saving goals with params:', {
-        p_client_id: clientId,
+        p_client_id: clientUUID,
         p_tenant_id: tenantId,
         p_user_id: user.id,
         goals
       });
 
       const { error } = await supabase.rpc('sp_upsert_client_goals', {
-        p_client_id: clientId,
+        p_client_id: clientUUID,
         p_tenant_id: tenantId,
         p_emotional_mental: goals.emotional_mental,
         p_physical: goals.physical,
