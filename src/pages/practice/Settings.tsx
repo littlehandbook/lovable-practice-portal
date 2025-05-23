@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { DashboardLayout } from '@/components/layouts/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -9,21 +8,68 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProfile } from '@/hooks/useProfile';
 import { ConfigurationTab } from '@/components/ConfigurationTab';
 import { UsersTab } from '@/components/UsersTab';
 import { BrandingTab } from '@/components/BrandingTab';
 
 const SettingsPage = () => {
   const { user } = useAuth();
+  const { updateProfile, changePassword, loading: profileLoading } = useProfile();
   const [activeTab, setActiveTab] = useState('profile');
-  const [isLoading, setIsLoading] = useState(false);
   
-  const handleSaveProfile = () => {
-    setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
+  // Profile form state
+  const [profileForm, setProfileForm] = useState({
+    fullName: '',
+    phone: '',
+    practiceName: '',
+    licenseNumber: ''
+  });
+
+  // Password form state
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  const [passwordError, setPasswordError] = useState('');
+
+  const handleSaveProfile = async () => {
+    const success = await updateProfile({
+      full_name: profileForm.fullName,
+      phone: profileForm.phone,
+      practice_name: profileForm.practiceName,
+      license_number: profileForm.licenseNumber
+    });
+
+    if (success) {
+      // Profile saved successfully
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setPasswordError('');
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+      return;
+    }
+
+    const success = await changePassword(passwordForm.newPassword);
+    
+    if (success) {
+      setPasswordForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    }
   };
 
   return (
@@ -65,7 +111,12 @@ const SettingsPage = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="fullName">Full Name</Label>
-                        <Input id="fullName" placeholder="Dr. Jane Smith" />
+                        <Input 
+                          id="fullName" 
+                          value={profileForm.fullName}
+                          onChange={(e) => setProfileForm(prev => ({ ...prev, fullName: e.target.value }))}
+                          placeholder="Dr. Jane Smith" 
+                        />
                       </div>
                       <div>
                         <Label htmlFor="email">Email</Label>
@@ -76,25 +127,31 @@ const SettingsPage = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="phone">Phone Number</Label>
-                        <Input id="phone" placeholder="(555) 123-4567" />
+                        <Input 
+                          id="phone" 
+                          value={profileForm.phone}
+                          onChange={(e) => setProfileForm(prev => ({ ...prev, phone: e.target.value }))}
+                          placeholder="(555) 123-4567" 
+                        />
                       </div>
                       <div>
                         <Label htmlFor="licenseNumber">License Number</Label>
-                        <Input id="licenseNumber" placeholder="PSY12345" />
+                        <Input 
+                          id="licenseNumber" 
+                          value={profileForm.licenseNumber}
+                          onChange={(e) => setProfileForm(prev => ({ ...prev, licenseNumber: e.target.value }))}
+                          placeholder="PSY12345" 
+                        />
                       </div>
                     </div>
                     
                     <div>
                       <Label htmlFor="practiceName">Practice Name</Label>
-                      <Input id="practiceName" placeholder="Wellness Therapy Center" />
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="bio">Professional Bio</Label>
-                      <textarea 
-                        id="bio"
-                        className="w-full min-h-[120px] p-3 border rounded-md focus:outline-none focus:ring-2"
-                        placeholder="Share a brief professional bio for your profile..."
+                      <Input 
+                        id="practiceName" 
+                        value={profileForm.practiceName}
+                        onChange={(e) => setProfileForm(prev => ({ ...prev, practiceName: e.target.value }))}
+                        placeholder="Wellness Therapy Center" 
                       />
                     </div>
                     
@@ -102,9 +159,9 @@ const SettingsPage = () => {
                       <Button 
                         className="bg-teal-600 hover:bg-teal-700" 
                         onClick={handleSaveProfile}
-                        disabled={isLoading}
+                        disabled={profileLoading}
                       >
-                        {isLoading ? 'Saving...' : 'Save Profile'}
+                        {profileLoading ? 'Saving...' : 'Save Profile'}
                       </Button>
                     </div>
                   </div>
@@ -128,18 +185,42 @@ const SettingsPage = () => {
                     <div className="grid gap-4 mt-4">
                       <div>
                         <Label htmlFor="currentPassword">Current Password</Label>
-                        <Input id="currentPassword" type="password" />
+                        <Input 
+                          id="currentPassword" 
+                          type="password" 
+                          value={passwordForm.currentPassword}
+                          onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+                        />
                       </div>
                       <div>
                         <Label htmlFor="newPassword">New Password</Label>
-                        <Input id="newPassword" type="password" />
+                        <Input 
+                          id="newPassword" 
+                          type="password" 
+                          value={passwordForm.newPassword}
+                          onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                        />
                       </div>
                       <div>
                         <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                        <Input id="confirmPassword" type="password" />
+                        <Input 
+                          id="confirmPassword" 
+                          type="password" 
+                          value={passwordForm.confirmPassword}
+                          onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                        />
                       </div>
+                      {passwordError && (
+                        <div className="text-red-600 text-sm">{passwordError}</div>
+                      )}
                       <div>
-                        <Button variant="outline">Change Password</Button>
+                        <Button 
+                          variant="outline" 
+                          onClick={handleChangePassword}
+                          disabled={!passwordForm.newPassword || !passwordForm.confirmPassword || profileLoading}
+                        >
+                          {profileLoading ? 'Changing...' : 'Change Password'}
+                        </Button>
                       </div>
                     </div>
                   </div>

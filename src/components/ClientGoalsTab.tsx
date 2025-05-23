@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { Save, Info } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
@@ -37,6 +36,8 @@ const goalDescriptions = {
 export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  
+  // Initialize with empty strings to prevent undefined values
   const [goals, setGoals] = useState<GoalData>({
     emotional_mental: '',
     physical: '',
@@ -46,9 +47,11 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
     intellectual_occupational: '',
     financial: ''
   });
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const tenantId = user?.id || '00000000-0000-0000-0000-000000000000';
 
@@ -58,17 +61,26 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
 
   const fetchGoals = async () => {
     setLoading(true);
+    setError(null);
+    
     try {
+      console.log('Fetching goals for client:', clientId, 'tenant:', tenantId);
+      
       const { data, error } = await supabase.rpc('sp_get_client_goals', {
         p_client_id: clientId,
         p_tenant_id: tenantId
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching goals:', error);
+        setError('Failed to load client goals');
+        return;
+      }
 
+      // Only update if we have data, preserving empty string defaults
       if (data && data.length > 0) {
         const goalData = data[0];
-        setGoals({
+        setGoals(prev => ({
           emotional_mental: goalData.emotional_mental || '',
           physical: goalData.physical || '',
           social_relational: goalData.social_relational || '',
@@ -76,15 +88,12 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
           environmental: goalData.environmental || '',
           intellectual_occupational: goalData.intellectual_occupational || '',
           financial: goalData.financial || ''
-        });
+        }));
       }
-    } catch (error) {
-      console.error('Error fetching goals:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load client goals',
-        variant: 'destructive'
-      });
+      // If no data, keep the empty string defaults
+    } catch (err) {
+      console.error('Exception fetching goals:', err);
+      setError('Failed to load client goals');
     } finally {
       setLoading(false);
     }
@@ -93,13 +102,26 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
   const handleGoalChange = (field: keyof GoalData, value: string) => {
     setGoals(prev => ({ ...prev, [field]: value }));
     setHasChanges(true);
+    setError(null);
   };
 
   const saveGoals = async () => {
-    if (!user) return;
+    if (!user) {
+      setError('User not authenticated');
+      return;
+    }
     
     setSaving(true);
+    setError(null);
+    
     try {
+      console.log('Saving goals with params:', {
+        p_client_id: clientId,
+        p_tenant_id: tenantId,
+        p_user_id: user.id,
+        goals
+      });
+
       const { error } = await supabase.rpc('sp_upsert_client_goals', {
         p_client_id: clientId,
         p_tenant_id: tenantId,
@@ -113,15 +135,25 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
         p_user_id: user.id
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error saving goals:', error);
+        setError(`Failed to save goals: ${error.message}`);
+        toast({
+          title: 'Error',
+          description: `Failed to save client goals: ${error.message}`,
+          variant: 'destructive'
+        });
+        return;
+      }
 
       setHasChanges(false);
       toast({
         title: 'Success',
         description: 'Client goals saved successfully'
       });
-    } catch (error) {
-      console.error('Error saving goals:', error);
+    } catch (err) {
+      console.error('Exception saving goals:', err);
+      setError('Failed to save goals');
       toast({
         title: 'Error',
         description: 'Failed to save client goals',
@@ -149,7 +181,7 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
       </div>
       <Textarea
         id={key}
-        value={goals[key]}
+        value={goals[key] || ''} // Ensure we always have a string value
         onChange={(e) => handleGoalChange(key, e.target.value)}
         placeholder={`Enter ${label.toLowerCase()} goals...`}
         disabled={saving}
@@ -182,6 +214,12 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
         </Button>
       </CardHeader>
       <CardContent className="space-y-6">
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-3">
+            <p className="text-red-600 text-sm">{error}</p>
+          </div>
+        )}
+        
         <div className="grid gap-6">
           {renderGoalField('emotional_mental', 'Emotional/Mental')}
           {renderGoalField('physical', 'Physical')}

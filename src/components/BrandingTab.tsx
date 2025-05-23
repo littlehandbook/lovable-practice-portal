@@ -1,105 +1,78 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
-import { Save, Upload } from 'lucide-react';
-
-interface BrandingData {
-  logo_url: string;
-  primary_color: string;
-  secondary_color: string;
-  practice_name: string;
-}
+import { useBranding } from '@/hooks/useBranding';
+import { Upload, Save, Palette } from 'lucide-react';
 
 export function BrandingTab() {
-  const { user } = useAuth();
-  const { toast } = useToast();
-  const [branding, setBranding] = useState<BrandingData>({
-    logo_url: '',
+  const { branding, loading, saving, error, uploadLogo, saveBranding } = useBranding();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const [formData, setFormData] = useState({
+    practice_name: '',
     primary_color: '#0f766e',
     secondary_color: '#14b8a6',
-    practice_name: ''
+    logo_url: ''
   });
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+
   const [hasChanges, setHasChanges] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
-  const tenantId = user?.id || '00000000-0000-0000-0000-000000000000';
-
-  useEffect(() => {
-    fetchBranding();
-  }, [tenantId]);
-
-  const fetchBranding = async () => {
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.rpc('sp_get_branding', {
-        p_tenant_id: tenantId
+  // Update form when branding loads
+  React.useEffect(() => {
+    if (branding && !loading) {
+      setFormData({
+        practice_name: branding.practice_name || '',
+        primary_color: branding.primary_color || '#0f766e',
+        secondary_color: branding.secondary_color || '#14b8a6',
+        logo_url: branding.logo_url || ''
       });
-
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        const brandingData = data[0];
-        setBranding({
-          logo_url: brandingData.logo_url || '',
-          primary_color: brandingData.primary_color || '#0f766e',
-          secondary_color: brandingData.secondary_color || '#14b8a6',
-          practice_name: brandingData.practice_name || ''
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching branding:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load branding settings',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [branding, loading]);
 
-  const handleBrandingChange = (field: keyof BrandingData, value: string) => {
-    setBranding(prev => ({ ...prev, [field]: value }));
+  const handleFormChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
     setHasChanges(true);
   };
 
-  const saveBranding = async () => {
-    if (!user) return;
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('File size must be less than 2MB');
+      return;
+    }
+
+    setUploading(true);
     
-    setSaving(true);
     try {
-      const { error } = await supabase.rpc('sp_upsert_branding', {
-        p_tenant_id: tenantId,
-        p_logo_url: branding.logo_url,
-        p_primary_color: branding.primary_color,
-        p_secondary_color: branding.secondary_color,
-        p_practice_name: branding.practice_name,
-        p_user_id: user.id
-      });
-
-      if (error) throw error;
-
-      setHasChanges(false);
-      toast({
-        title: 'Success',
-        description: 'Branding settings saved successfully'
-      });
-    } catch (error) {
-      console.error('Error saving branding:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save branding settings',
-        variant: 'destructive'
-      });
+      const logoUrl = await uploadLogo(file);
+      if (logoUrl) {
+        setFormData(prev => ({ ...prev, logo_url: logoUrl }));
+        setHasChanges(true);
+      }
+    } catch (err) {
+      console.error('Logo upload failed:', err);
     } finally {
-      setSaving(false);
+      setUploading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    const success = await saveBranding(formData);
+    if (success) {
+      setHasChanges(false);
     }
   };
 
@@ -116,73 +89,90 @@ export function BrandingTab() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle>Branding & Customization</CardTitle>
+        <CardTitle>Practice Branding</CardTitle>
         <Button
-          onClick={saveBranding}
+          onClick={handleSave}
           disabled={!hasChanges || saving}
           className="bg-teal-600 hover:bg-teal-700"
         >
           <Save className="h-4 w-4 mr-2" />
-          {saving ? 'Saving...' : 'Save Changes'}
+          {saving ? 'Saving...' : 'Save Branding'}
         </Button>
       </CardHeader>
       <CardContent className="space-y-6">
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-3">
+            <p className="text-red-600 text-sm">{error}</p>
+          </div>
+        )}
+
         <div className="grid gap-6">
           <div>
             <Label htmlFor="practice_name">Practice Name</Label>
             <Input
               id="practice_name"
-              value={branding.practice_name}
-              onChange={(e) => handleBrandingChange('practice_name', e.target.value)}
+              value={formData.practice_name}
+              onChange={(e) => handleFormChange('practice_name', e.target.value)}
               placeholder="Enter your practice name"
               disabled={saving}
             />
-            <p className="text-sm text-gray-500 mt-1">
-              This will replace "TherapyPortal" in the navigation
-            </p>
           </div>
 
           <div>
-            <Label htmlFor="logo_url">Logo URL</Label>
-            <div className="flex gap-2">
-              <Input
-                id="logo_url"
-                value={branding.logo_url}
-                onChange={(e) => handleBrandingChange('logo_url', e.target.value)}
-                placeholder="Enter logo URL or upload a file"
-                disabled={saving}
-              />
-              <Button variant="outline" disabled={saving}>
-                <Upload className="h-4 w-4 mr-2" />
-                Upload
-              </Button>
-            </div>
-            {branding.logo_url && (
-              <div className="mt-2">
-                <img 
-                  src={branding.logo_url} 
-                  alt="Logo preview" 
-                  className="h-12 w-auto object-contain border rounded"
+            <Label>Practice Logo</Label>
+            <div className="mt-2 space-y-4">
+              {formData.logo_url && (
+                <div className="flex items-center space-x-4">
+                  <img 
+                    src={formData.logo_url} 
+                    alt="Practice logo" 
+                    className="h-16 w-16 object-contain border rounded"
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={() => setFormData(prev => ({ ...prev, logo_url: '' }))}
+                    disabled={saving}
+                  >
+                    Remove Logo
+                  </Button>
+                </div>
+              )}
+              
+              <div>
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading || saving}
+                >
+                  <Upload className="h-4 w-4 mr-2" />
+                  {uploading ? 'Uploading...' : 'Upload Logo'}
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="hidden"
                 />
               </div>
-            )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="primary_color">Primary Color</Label>
-              <div className="flex gap-2">
+              <div className="flex items-center space-x-2 mt-2">
                 <Input
                   id="primary_color"
                   type="color"
-                  value={branding.primary_color}
-                  onChange={(e) => handleBrandingChange('primary_color', e.target.value)}
+                  value={formData.primary_color}
+                  onChange={(e) => handleFormChange('primary_color', e.target.value)}
+                  className="w-12 h-10 p-1 border rounded"
                   disabled={saving}
-                  className="w-16 h-10"
                 />
                 <Input
-                  value={branding.primary_color}
-                  onChange={(e) => handleBrandingChange('primary_color', e.target.value)}
+                  value={formData.primary_color}
+                  onChange={(e) => handleFormChange('primary_color', e.target.value)}
                   placeholder="#0f766e"
                   disabled={saving}
                 />
@@ -191,18 +181,18 @@ export function BrandingTab() {
 
             <div>
               <Label htmlFor="secondary_color">Secondary Color</Label>
-              <div className="flex gap-2">
+              <div className="flex items-center space-x-2 mt-2">
                 <Input
                   id="secondary_color"
                   type="color"
-                  value={branding.secondary_color}
-                  onChange={(e) => handleBrandingChange('secondary_color', e.target.value)}
+                  value={formData.secondary_color}
+                  onChange={(e) => handleFormChange('secondary_color', e.target.value)}
+                  className="w-12 h-10 p-1 border rounded"
                   disabled={saving}
-                  className="w-16 h-10"
                 />
                 <Input
-                  value={branding.secondary_color}
-                  onChange={(e) => handleBrandingChange('secondary_color', e.target.value)}
+                  value={formData.secondary_color}
+                  onChange={(e) => handleFormChange('secondary_color', e.target.value)}
                   placeholder="#14b8a6"
                   disabled={saving}
                 />
@@ -210,20 +200,27 @@ export function BrandingTab() {
             </div>
           </div>
 
-          <div className="border rounded-lg p-4">
-            <h3 className="font-medium mb-2">Preview</h3>
-            <div 
-              className="border rounded p-4 text-white"
-              style={{ backgroundColor: branding.primary_color }}
-            >
-              <h4 className="font-bold">
-                {branding.practice_name || 'Practice Portal'}
-              </h4>
-              <p className="text-sm opacity-90">Sample navigation bar</p>
+          <div className="border-t pt-4">
+            <h3 className="text-lg font-medium mb-4">Color Preview</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div 
+                className="p-4 rounded-lg text-white"
+                style={{ backgroundColor: formData.primary_color }}
+              >
+                <h4 className="font-medium">Primary Color</h4>
+                <p className="text-sm opacity-90">This will be used for main buttons and headers</p>
+              </div>
+              <div 
+                className="p-4 rounded-lg text-white"
+                style={{ backgroundColor: formData.secondary_color }}
+              >
+                <h4 className="font-medium">Secondary Color</h4>
+                <p className="text-sm opacity-90">This will be used for accents and highlights</p>
+              </div>
             </div>
           </div>
         </div>
-        
+
         {hasChanges && (
           <div className="border-t pt-4">
             <p className="text-sm text-orange-600">You have unsaved changes</p>
