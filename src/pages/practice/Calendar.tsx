@@ -7,13 +7,25 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
 import { ChevronLeft, ChevronRight, Plus, Clock } from 'lucide-react';
+
+interface AvailabilitySlot {
+  id: number;
+  day: string;
+  startTime: string;
+  endTime: string;
+  enabled: boolean;
+}
 
 const CalendarPage = () => {
   const [date, setDate] = useState<Date>(new Date());
   const [view, setView] = useState<'day' | 'week' | 'month'>('week');
   const [openAvailabilityDialog, setOpenAvailabilityDialog] = useState(false);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
+  const { toast } = useToast();
   
   // Mock data for scheduled sessions
   const scheduledSessions = [
@@ -22,18 +34,39 @@ const CalendarPage = () => {
     { id: 3, clientName: 'Emily Johnson', time: '14:00', duration: 50 },
   ];
   
-  // Mock data for availability
-  const availabilitySlots = [
-    { id: 1, day: 'Monday', startTime: '09:00', endTime: '17:00' },
-    { id: 2, day: 'Tuesday', startTime: '09:00', endTime: '17:00' },
-    { id: 3, day: 'Wednesday', startTime: '12:00', endTime: '20:00' },
-    { id: 4, day: 'Thursday', startTime: '09:00', endTime: '17:00' },
-    { id: 5, day: 'Friday', startTime: '09:00', endTime: '15:00' },
-  ];
+  // Availability state with enabled/disabled functionality
+  const [availabilitySlots, setAvailabilitySlots] = useState<AvailabilitySlot[]>([
+    { id: 1, day: 'Monday', startTime: '09:00', endTime: '17:00', enabled: true },
+    { id: 2, day: 'Tuesday', startTime: '09:00', endTime: '17:00', enabled: true },
+    { id: 3, day: 'Wednesday', startTime: '12:00', endTime: '20:00', enabled: true },
+    { id: 4, day: 'Thursday', startTime: '09:00', endTime: '17:00', enabled: true },
+    { id: 5, day: 'Friday', startTime: '09:00', endTime: '15:00', enabled: true },
+    { id: 6, day: 'Saturday', startTime: '', endTime: '', enabled: false },
+    { id: 7, day: 'Sunday', startTime: '', endTime: '', enabled: false },
+  ]);
 
   const timeSlots = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
   
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+  const handleAvailabilityChange = (id: number, field: keyof AvailabilitySlot, value: string | boolean) => {
+    setAvailabilitySlots(prev => prev.map(slot => 
+      slot.id === id ? { ...slot, [field]: value } : slot
+    ));
+  };
+
+  const handleSaveAvailability = () => {
+    // Here you would normally save to your backend/database
+    // For now, we'll just show a success message
+    console.log('Saving availability:', availabilitySlots);
+    
+    toast({
+      title: 'Availability Updated',
+      description: 'Your availability schedule has been saved successfully.',
+    });
+    
+    setOpenAvailabilityDialog(false);
+  };
 
   const handlePreviousDate = () => {
     const newDate = new Date(date);
@@ -215,27 +248,46 @@ const CalendarPage = () => {
       
       {/* Set Availability Dialog */}
       <Dialog open={openAvailabilityDialog} onOpenChange={setOpenAvailabilityDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Set Your Availability</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4 py-4 max-h-96 overflow-y-auto">
             {availabilitySlots.map((slot) => (
-              <div key={slot.id} className="grid grid-cols-3 gap-4 items-center">
+              <div key={slot.id} className="grid grid-cols-5 gap-4 items-center p-3 border rounded-lg">
                 <div className="font-medium">{slot.day}</div>
+                <div className="flex items-center space-x-2">
+                  <Switch 
+                    checked={slot.enabled}
+                    onCheckedChange={(checked) => handleAvailabilityChange(slot.id, 'enabled', checked)}
+                  />
+                  <Label className="text-sm">Available</Label>
+                </div>
                 <div>
                   <Input 
                     type="time" 
-                    defaultValue={slot.startTime} 
+                    value={slot.startTime}
+                    onChange={(e) => handleAvailabilityChange(slot.id, 'startTime', e.target.value)}
+                    disabled={!slot.enabled}
                     className="w-full" 
+                    placeholder="Start time"
                   />
                 </div>
                 <div>
                   <Input 
                     type="time" 
-                    defaultValue={slot.endTime} 
+                    value={slot.endTime}
+                    onChange={(e) => handleAvailabilityChange(slot.id, 'endTime', e.target.value)}
+                    disabled={!slot.enabled}
                     className="w-full" 
+                    placeholder="End time"
                   />
+                </div>
+                <div className="text-xs text-gray-500">
+                  {slot.enabled && slot.startTime && slot.endTime 
+                    ? `${slot.startTime} - ${slot.endTime}` 
+                    : 'Not available'
+                  }
                 </div>
               </div>
             ))}
@@ -244,8 +296,8 @@ const CalendarPage = () => {
             <Button variant="outline" onClick={() => setOpenAvailabilityDialog(false)}>
               Cancel
             </Button>
-            <Button className="bg-teal-600 hover:bg-teal-700" onClick={() => setOpenAvailabilityDialog(false)}>
-              Save
+            <Button className="bg-teal-600 hover:bg-teal-700" onClick={handleSaveAvailability}>
+              Save Availability
             </Button>
           </DialogFooter>
         </DialogContent>
