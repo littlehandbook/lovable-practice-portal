@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layouts/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Plus, MoreHorizontal } from 'lucide-react';
+import { Search, MoreHorizontal } from 'lucide-react';
+import { AddClientDialog } from '@/components/AddClientDialog';
 
 const ClientsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,15 +23,18 @@ const ClientsPage = () => {
     client.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleClientAdded = () => {
+    // This would normally refresh the client list from the server
+    // For now, it's just a placeholder since we're using mock data
+    console.log('Client added - would refresh client list here');
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-2xl font-bold tracking-tight">Clients</h1>
-          <Button className="bg-teal-600 hover:bg-teal-700">
-            <Plus className="h-4 w-4 mr-2" />
-            Add New Client
-          </Button>
+          <AddClientDialog onClientAdded={handleClientAdded} />
         </div>
         
         <Card>
