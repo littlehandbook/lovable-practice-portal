@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { Plus, Trash2, User, UserPlus, ShieldCheck } from 'lucide-react';
 
 interface User {
@@ -33,6 +33,7 @@ export function UsersTab() {
   const { toast } = useToast();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [usersError, setUsersError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   
   // New user form state
@@ -41,9 +42,10 @@ export function UsersTab() {
   const [newUserLastName, setNewUserLastName] = useState('');
   const [newUserRole, setNewUserRole] = useState<'admin' | 'practitioner'>('practitioner');
 
-  // Page permissions state - now connected to real database
+  // Page permissions state
   const [pagePermissions, setPagePermissions] = useState<PagePermission[]>([]);
   const [permissionsLoading, setPermissionsLoading] = useState(true);
+  const [permissionsError, setPermissionsError] = useState<string | null>(null);
   
   const tenantId = user?.id || '00000000-0000-0000-0000-000000000000';
 
@@ -54,20 +56,23 @@ export function UsersTab() {
 
   const fetchUsers = async () => {
     setLoading(true);
+    setUsersError(null);
     try {
       const { data, error } = await supabase.rpc('sp_get_tenant_users', {
         p_tenant_id: tenantId
       });
 
-      if (error) throw error;
-      setUsers(data || []);
+      if (error) {
+        console.error('Error fetching users:', error);
+        setUsersError('Failed to load users');
+        setUsers([]);
+      } else {
+        setUsers(data || []);
+      }
     } catch (error) {
       console.error('Error fetching users:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load users',
-        variant: 'destructive'
-      });
+      setUsersError('Failed to load users');
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -75,20 +80,23 @@ export function UsersTab() {
 
   const fetchPagePermissions = async () => {
     setPermissionsLoading(true);
+    setPermissionsError(null);
     try {
       const { data, error } = await supabase.rpc('sp_get_page_permissions', {
         p_tenant_id: tenantId
       });
 
-      if (error) throw error;
-      setPagePermissions(data || []);
+      if (error) {
+        console.error('Error fetching page permissions:', error);
+        setPermissionsError('Failed to load page permissions');
+        setPagePermissions([]);
+      } else {
+        setPagePermissions(data || []);
+      }
     } catch (error) {
       console.error('Error fetching page permissions:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load page permissions',
-        variant: 'destructive'
-      });
+      setPermissionsError('Failed to load page permissions');
+      setPagePermissions([]);
     } finally {
       setPermissionsLoading(false);
     }
@@ -205,7 +213,6 @@ export function UsersTab() {
 
   const saveAllPermissions = async () => {
     try {
-      // All permissions are saved individually when toggled, so this is just a confirmation
       toast({
         title: 'Changes Saved',
         description: 'All page permissions have been saved',
@@ -315,8 +322,12 @@ export function UsersTab() {
             {/* Users list */}
             <div className="space-y-4">
               <h3 className="font-medium">Current Users</h3>
-              {users.length === 0 ? (
-                <p className="text-gray-500">No users found</p>
+              {usersError ? (
+                <div className="text-red-600 bg-red-50 p-3 rounded-md">
+                  {usersError}
+                </div>
+              ) : users.length === 0 ? (
+                <p className="text-gray-500">No users found. Add your first user above.</p>
               ) : (
                 <div className="border rounded-lg overflow-hidden">
                   <Table>
@@ -374,6 +385,12 @@ export function UsersTab() {
           <CardContent>
             {permissionsLoading ? (
               <p className="text-gray-500">Loading permissions...</p>
+            ) : permissionsError ? (
+              <div className="text-red-600 bg-red-50 p-3 rounded-md">
+                {permissionsError}
+              </div>
+            ) : pagePermissions.length === 0 ? (
+              <p className="text-gray-500">No page permissions configured yet.</p>
             ) : (
               <>
                 <div className="border rounded-lg overflow-hidden">

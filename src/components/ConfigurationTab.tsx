@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { Save, AlertCircle, Clock } from 'lucide-react';
 
 interface ConfigurationItem {
@@ -45,7 +45,6 @@ export function ConfigurationTab() {
   const [error, setError] = useState<string | null>(null);
   const [currentTimes, setCurrentTimes] = useState<Record<string, string>>({});
 
-  // For now, we'll use a mock tenant ID since the tenant system isn't fully implemented
   const tenantId = user?.id || '00000000-0000-0000-0000-000000000000';
 
   // Default configuration schema
@@ -101,8 +100,14 @@ export function ConfigurationTab() {
         });
 
         if (error) {
-          setError(error.message);
           console.error('Error fetching config:', error);
+          // Don't show error for empty configuration - this is normal for new tenants
+          if (error.message?.includes('no rows') || error.code === 'PGRST116') {
+            // No configuration found - use defaults
+            setConfig({ ...defaultConfig });
+          } else {
+            setError('Failed to load configuration');
+          }
         } else {
           const configMap: Record<string, any> = { ...defaultConfig };
           
@@ -122,8 +127,10 @@ export function ConfigurationTab() {
           setPendingChanges({});
         }
       } catch (err) {
-        setError('Failed to load configuration');
         console.error('Configuration fetch error:', err);
+        // Use default configuration if fetch fails
+        setConfig({ ...defaultConfig });
+        setError(null); // Don't show error for missing config
       } finally {
         setLoading(false);
       }
