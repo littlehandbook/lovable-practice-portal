@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useBranding } from '@/hooks/useBranding';
-import { Upload, Save, Palette } from 'lucide-react';
+import { Upload, Save, Palette, Trash2 } from 'lucide-react';
 
 export function BrandingTab() {
   const { branding, loading, saving, error, uploadLogo, saveBranding } = useBranding();
@@ -48,9 +48,9 @@ export function BrandingTab() {
       return;
     }
 
-    // Validate file size (max 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      alert('File size must be less than 2MB');
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size must be less than 5MB');
       return;
     }
 
@@ -66,7 +66,16 @@ export function BrandingTab() {
       console.error('Logo upload failed:', err);
     } finally {
       setUploading(false);
+      // Clear the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
+  };
+
+  const handleRemoveLogo = () => {
+    setFormData(prev => ({ ...prev, logo_url: '' }));
+    setHasChanges(true);
   };
 
   const handleSave = async () => {
@@ -93,7 +102,11 @@ export function BrandingTab() {
         <Button
           onClick={handleSave}
           disabled={!hasChanges || saving}
-          className="bg-teal-600 hover:bg-teal-700"
+          style={{ 
+            backgroundColor: formData.primary_color,
+            color: 'white'
+          }}
+          className="hover:opacity-90"
         >
           <Save className="h-4 w-4 mr-2" />
           {saving ? 'Saving...' : 'Save Branding'}
@@ -116,6 +129,9 @@ export function BrandingTab() {
               placeholder="Enter your practice name"
               disabled={saving}
             />
+            <p className="text-sm text-gray-500 mt-1">
+              This will be displayed in both the Practice Portal and Client Portal
+            </p>
           </div>
 
           <div>
@@ -130,9 +146,11 @@ export function BrandingTab() {
                   />
                   <Button
                     variant="outline"
-                    onClick={() => setFormData(prev => ({ ...prev, logo_url: '' }))}
+                    onClick={handleRemoveLogo}
                     disabled={saving}
+                    size="sm"
                   >
+                    <Trash2 className="h-4 w-4 mr-2" />
                     Remove Logo
                   </Button>
                 </div>
@@ -145,7 +163,7 @@ export function BrandingTab() {
                   disabled={uploading || saving}
                 >
                   <Upload className="h-4 w-4 mr-2" />
-                  {uploading ? 'Uploading...' : 'Upload Logo'}
+                  {uploading ? 'Uploading...' : formData.logo_url ? 'Change Logo' : 'Upload Logo'}
                 </Button>
                 <input
                   ref={fileInputRef}
@@ -154,6 +172,9 @@ export function BrandingTab() {
                   onChange={handleLogoUpload}
                   className="hidden"
                 />
+                <p className="text-sm text-gray-500 mt-1">
+                  Recommended: Square image, max 5MB (PNG, JPG, SVG)
+                </p>
               </div>
             </div>
           </div>
@@ -167,7 +188,7 @@ export function BrandingTab() {
                   type="color"
                   value={formData.primary_color}
                   onChange={(e) => handleFormChange('primary_color', e.target.value)}
-                  className="w-12 h-10 p-1 border rounded"
+                  className="w-12 h-10 p-1 border rounded cursor-pointer"
                   disabled={saving}
                 />
                 <Input
@@ -187,7 +208,7 @@ export function BrandingTab() {
                   type="color"
                   value={formData.secondary_color}
                   onChange={(e) => handleFormChange('secondary_color', e.target.value)}
-                  className="w-12 h-10 p-1 border rounded"
+                  className="w-12 h-10 p-1 border rounded cursor-pointer"
                   disabled={saving}
                 />
                 <Input
@@ -201,21 +222,68 @@ export function BrandingTab() {
           </div>
 
           <div className="border-t pt-4">
-            <h3 className="text-lg font-medium mb-4">Color Preview</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <h3 className="text-lg font-medium mb-4 flex items-center">
+              <Palette className="h-5 w-5 mr-2" />
+              Color Preview
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div 
                 className="p-4 rounded-lg text-white"
                 style={{ backgroundColor: formData.primary_color }}
               >
                 <h4 className="font-medium">Primary Color</h4>
-                <p className="text-sm opacity-90">This will be used for main buttons and headers</p>
+                <p className="text-sm opacity-90">Navigation, buttons, and main brand elements</p>
               </div>
               <div 
                 className="p-4 rounded-lg text-white"
                 style={{ backgroundColor: formData.secondary_color }}
               >
                 <h4 className="font-medium">Secondary Color</h4>
-                <p className="text-sm opacity-90">This will be used for accents and highlights</p>
+                <p className="text-sm opacity-90">Accents, highlights, and supporting elements</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Live Preview */}
+          <div className="border-t pt-4">
+            <h3 className="text-lg font-medium mb-4">Live Preview</h3>
+            <div className="border rounded-lg p-4 bg-white">
+              <div className="flex items-center space-x-3 mb-4">
+                {formData.logo_url && (
+                  <img 
+                    src={formData.logo_url} 
+                    alt="Practice logo preview" 
+                    className="h-8 w-8 object-contain"
+                  />
+                )}
+                <h4 
+                  className="text-xl font-bold"
+                  style={{ color: formData.primary_color }}
+                >
+                  {formData.practice_name || 'Your Practice Name'}
+                </h4>
+              </div>
+              <div className="flex space-x-2">
+                <Button 
+                  size="sm"
+                  style={{ 
+                    backgroundColor: formData.primary_color,
+                    color: 'white'
+                  }}
+                  className="hover:opacity-90"
+                >
+                  Primary Button
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  style={{ 
+                    borderColor: formData.secondary_color,
+                    color: formData.secondary_color
+                  }}
+                >
+                  Secondary Button
+                </Button>
               </div>
             </div>
           </div>
@@ -223,7 +291,10 @@ export function BrandingTab() {
 
         {hasChanges && (
           <div className="border-t pt-4">
-            <p className="text-sm text-orange-600">You have unsaved changes</p>
+            <p className="text-sm text-orange-600 flex items-center">
+              <span className="w-2 h-2 bg-orange-600 rounded-full mr-2"></span>
+              You have unsaved changes
+            </p>
           </div>
         )}
       </CardContent>

@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useBranding } from '@/hooks/useBranding';
 import { 
   Calendar, 
   FileText, 
@@ -18,6 +19,7 @@ interface ClientLayoutProps {
 
 export function ClientLayout({ children }: ClientLayoutProps) {
   const { user, signOut } = useAuth();
+  const { branding } = useBranding();
   const location = useLocation();
   
   const navItems = [
@@ -48,12 +50,38 @@ export function ClientLayout({ children }: ClientLayoutProps) {
     },
   ];
 
+  // Apply custom CSS variables for branding colors
+  useEffect(() => {
+    if (branding.primary_color && branding.secondary_color) {
+      document.documentElement.style.setProperty('--primary-color', branding.primary_color);
+      document.documentElement.style.setProperty('--secondary-color', branding.secondary_color);
+    }
+  }, [branding.primary_color, branding.secondary_color]);
+
+  const primaryColor = branding.primary_color || '#7c3aed';
+  const secondaryColor = branding.secondary_color || '#8b5cf6';
+  const practiceName = branding.practice_name || 'Practice Portal';
+
   return (
     <div className="min-h-screen flex bg-gray-50">
       {/* Sidebar */}
       <div className="hidden md:flex md:flex-col md:w-64 bg-white border-r shadow-sm">
         <div className="p-4 border-b">
-          <h1 className="text-xl font-bold text-purple-600">Client Portal</h1>
+          <div className="flex items-center space-x-3">
+            {branding.logo_url && (
+              <img 
+                src={branding.logo_url} 
+                alt="Practice logo" 
+                className="h-8 w-8 object-contain"
+              />
+            )}
+            <h1 
+              className="text-xl font-bold"
+              style={{ color: primaryColor }}
+            >
+              {practiceName} - Client Portal
+            </h1>
+          </div>
         </div>
         <nav className="flex-1 overflow-y-auto p-4">
           <ul className="space-y-2">
@@ -63,9 +91,13 @@ export function ClientLayout({ children }: ClientLayoutProps) {
                   to={item.path}
                   className={`flex items-center px-4 py-2 rounded-md transition-colors ${
                     location.pathname === item.path
-                      ? 'bg-purple-50 text-purple-700'
+                      ? 'text-gray-700'
                       : 'hover:bg-gray-100 text-gray-700'
                   }`}
+                  style={location.pathname === item.path ? {
+                    backgroundColor: `${primaryColor}15`,
+                    color: primaryColor
+                  } : {}}
                 >
                   {item.icon}
                   <span className="ml-3">{item.name}</span>
@@ -78,7 +110,12 @@ export function ClientLayout({ children }: ClientLayoutProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <Avatar className="h-8 w-8 mr-2">
-                <AvatarFallback className="bg-purple-100 text-purple-800">
+                <AvatarFallback 
+                  style={{ 
+                    backgroundColor: `${primaryColor}15`,
+                    color: primaryColor
+                  }}
+                >
                   {user?.email?.charAt(0).toUpperCase() || 'C'}
                 </AvatarFallback>
               </Avatar>
@@ -100,8 +137,21 @@ export function ClientLayout({ children }: ClientLayoutProps) {
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 bg-white border-b z-10 p-4">
         <div className="flex justify-between items-center">
-          <h1 className="text-xl font-bold text-purple-600">Client Portal</h1>
-          {/* Mobile menu button would go here */}
+          <div className="flex items-center space-x-3">
+            {branding.logo_url && (
+              <img 
+                src={branding.logo_url} 
+                alt="Practice logo" 
+                className="h-6 w-6 object-contain"
+              />
+            )}
+            <h1 
+              className="text-xl font-bold"
+              style={{ color: primaryColor }}
+            >
+              {practiceName} - Client Portal
+            </h1>
+          </div>
         </div>
       </div>
 

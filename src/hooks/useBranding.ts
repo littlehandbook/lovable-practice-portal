@@ -69,8 +69,22 @@ export function useBranding() {
     try {
       console.log('Uploading logo for tenant:', tenantId);
 
-      // Create storage bucket if it doesn't exist
+      // Create the logos bucket if it doesn't exist
       const bucketName = 'logos';
+      
+      // Check if bucket exists, if not create it
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
+      
+      if (!bucketExists) {
+        const { error: bucketError } = await supabase.storage.createBucket(bucketName, {
+          public: true
+        });
+        if (bucketError) {
+          console.error('Error creating bucket:', bucketError);
+        }
+      }
+
       const fileName = `${tenantId}/logo-${Date.now()}.${file.name.split('.').pop()}`;
 
       const { data, error: uploadError } = await supabase.storage
