@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { DashboardLayout } from '@/components/layouts/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -9,6 +10,8 @@ import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useAuth } from '@/contexts/AuthContext';
 import { ConfigurationTab } from '@/components/ConfigurationTab';
+import { UsersTab } from '@/components/UsersTab';
+import { BrandingTab } from '@/components/BrandingTab';
 
 const SettingsPage = () => {
   const { user } = useAuth();
@@ -29,11 +32,13 @@ const SettingsPage = () => {
         <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
         
         <Tabs defaultValue={activeTab} value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-4 w-full max-w-lg">
+          <TabsList className="grid grid-cols-6 w-full max-w-2xl">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="configuration">Configuration</TabsTrigger>
+            <TabsTrigger value="branding">Branding</TabsTrigger>
+            <TabsTrigger value="users">Users</TabsTrigger>
           </TabsList>
           
           <TabsContent value="profile" className="space-y-6">
@@ -252,6 +257,14 @@ const SettingsPage = () => {
           
           <TabsContent value="configuration" className="space-y-6">
             <ConfigurationTab />
+          </TabsContent>
+          
+          <TabsContent value="branding" className="space-y-6">
+            <BrandingTab />
+          </TabsContent>
+          
+          <TabsContent value="users" className="space-y-6">
+            <UsersTab />
           </TabsContent>
         </Tabs>
       </div>

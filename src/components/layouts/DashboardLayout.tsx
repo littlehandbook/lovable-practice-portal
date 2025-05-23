@@ -1,7 +1,7 @@
-
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Calendar, 
   Users, 
@@ -20,6 +20,37 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { user, signOut } = useAuth();
   const location = useLocation();
+  const [practiceName, setPracticeName] = useState('Practice Portal');
+  
+  const tenantId = user?.id || '00000000-0000-0000-0000-000000000000';
+  
+  useEffect(() => {
+    const fetchPracticeName = async () => {
+      try {
+        const { data, error } = await supabase.rpc('sp_get_config', { 
+          p_tenant: tenantId 
+        });
+
+        if (!error && data) {
+          const practiceNameConfig = data.find((config: any) => config.key === 'practice_name');
+          if (practiceNameConfig && practiceNameConfig.value) {
+            const name = typeof practiceNameConfig.value === 'string' 
+              ? JSON.parse(practiceNameConfig.value) 
+              : practiceNameConfig.value;
+            if (name) {
+              setPracticeName(name);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching practice name:', error);
+      }
+    };
+
+    if (user) {
+      fetchPracticeName();
+    }
+  }, [user, tenantId]);
   
   const navItems = [
     { 
@@ -59,7 +90,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Sidebar */}
       <div className="hidden md:flex md:flex-col md:w-64 bg-white border-r shadow-sm">
         <div className="p-4 border-b">
-          <h1 className="text-xl font-bold text-teal-600">TherapyPortal</h1>
+          <h1 className="text-xl font-bold text-teal-600">{practiceName}</h1>
         </div>
         <nav className="flex-1 overflow-y-auto p-4">
           <ul className="space-y-2">
@@ -106,7 +137,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Mobile Header */}
       <div className="md:hidden fixed top-0 left-0 right-0 bg-white border-b z-10 p-4">
         <div className="flex justify-between items-center">
-          <h1 className="text-xl font-bold text-teal-600">TherapyPortal</h1>
+          <h1 className="text-xl font-bold text-teal-600">{practiceName}</h1>
           {/* Mobile menu button would go here */}
         </div>
       </div>
