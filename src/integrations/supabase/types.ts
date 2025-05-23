@@ -279,6 +279,42 @@ export type Database = {
         }
         Relationships: []
       }
+      tbl_page_permissions: {
+        Row: {
+          allowed_roles: string[] | null
+          component_name: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          page_name: string
+          page_path: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          allowed_roles?: string[] | null
+          component_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          page_name: string
+          page_path: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          allowed_roles?: string[] | null
+          component_name?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          page_name?: string
+          page_path?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tbl_tenant_registry: {
         Row: {
           created_at: string
@@ -297,6 +333,39 @@ export type Database = {
           practice_name?: string
           status?: string
           tenant_id?: string
+        }
+        Relationships: []
+      }
+      tbl_tenant_users: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          role: string
+          tenant_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          role?: string
+          tenant_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          role?: string
+          tenant_id?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -339,6 +408,39 @@ export type Database = {
           phone?: string | null
           practice_name?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      tbl_user_roles: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          is_default: boolean | null
+          role_description: string | null
+          role_name: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean | null
+          role_description?: string | null
+          role_name: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_default?: boolean | null
+          role_description?: string | null
+          role_name?: string
+          tenant_id?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -415,6 +517,15 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      sp_add_user_to_tenant: {
+        Args: {
+          p_user_id: string
+          p_tenant_id: string
+          p_role: string
+          p_created_by: string
+        }
+        Returns: undefined
+      }
       sp_audit_login: {
         Args: {
           p_therapist_id: string
@@ -464,6 +575,27 @@ export type Database = {
           updated_by: string
         }[]
       }
+      sp_get_page_permissions: {
+        Args: { p_tenant_id: string }
+        Returns: {
+          id: string
+          page_path: string
+          page_name: string
+          component_name: string
+          roles: string[]
+        }[]
+      }
+      sp_get_tenant_users: {
+        Args: { p_tenant_id: string }
+        Returns: {
+          user_id: string
+          email: string
+          role: string
+          created_at: string
+          first_name: string
+          last_name: string
+        }[]
+      }
       sp_get_therapist_by_email: {
         Args: { p_email: string }
         Returns: {
@@ -473,6 +605,16 @@ export type Database = {
           practice_name: string
           is_active: boolean
           email_verified: boolean
+        }[]
+      }
+      sp_get_user_roles: {
+        Args: { p_tenant_id: string }
+        Returns: {
+          id: string
+          role_name: string
+          role_description: string
+          is_default: boolean
+          created_at: string
         }[]
       }
       sp_register_therapist: {
@@ -487,6 +629,15 @@ export type Database = {
       }
       sp_update_config: {
         Args: { p_tenant: string; p_key: string; p_value: Json; p_user: string }
+        Returns: undefined
+      }
+      sp_update_page_permissions: {
+        Args: {
+          p_tenant_id: string
+          p_page_id: string
+          p_allowed_roles: string[]
+          p_user_id: string
+        }
         Returns: undefined
       }
       sp_upsert_branding: {
@@ -514,6 +665,16 @@ export type Database = {
           p_user_id: string
         }
         Returns: undefined
+      }
+      sp_upsert_user_role: {
+        Args: {
+          p_tenant_id: string
+          p_role_name: string
+          p_role_description: string
+          p_is_default: boolean
+          p_user_id: string
+        }
+        Returns: string
       }
     }
     Enums: {

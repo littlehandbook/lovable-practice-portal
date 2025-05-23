@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -50,6 +49,14 @@ export function useBranding() {
           primary_color: brandingData.primary_color || '#0f766e',
           secondary_color: brandingData.secondary_color || '#14b8a6',
           practice_name: brandingData.practice_name || ''
+        });
+      } else {
+        // No branding data found, keep defaults
+        setBranding({
+          logo_url: '',
+          primary_color: '#0f766e',
+          secondary_color: '#14b8a6',
+          practice_name: ''
         });
       }
     } catch (err) {
