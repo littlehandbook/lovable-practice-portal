@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
-import { Save, AlertCircle } from 'lucide-react';
+import { Save, AlertCircle, Clock } from 'lucide-react';
 
 interface ConfigurationItem {
   key: string;
@@ -19,13 +20,30 @@ interface ConfigurationItem {
   updated_by: string;
 }
 
+// Common timezones with their display names
+const TIMEZONES = [
+  { value: 'America/New_York', label: 'Eastern Time (ET)', utcOffset: -5 },
+  { value: 'America/Chicago', label: 'Central Time (CT)', utcOffset: -6 },
+  { value: 'America/Denver', label: 'Mountain Time (MT)', utcOffset: -7 },
+  { value: 'America/Los_Angeles', label: 'Pacific Time (PT)', utcOffset: -8 },
+  { value: 'America/Phoenix', label: 'Arizona Time (MST)', utcOffset: -7 },
+  { value: 'America/Anchorage', label: 'Alaska Time (AKST)', utcOffset: -9 },
+  { value: 'Pacific/Honolulu', label: 'Hawaii Time (HST)', utcOffset: -10 },
+  { value: 'Europe/London', label: 'Greenwich Mean Time (GMT)', utcOffset: 0 },
+  { value: 'Europe/Paris', label: 'Central European Time (CET)', utcOffset: 1 },
+  { value: 'Asia/Tokyo', label: 'Japan Standard Time (JST)', utcOffset: 9 },
+  { value: 'Australia/Sydney', label: 'Australian Eastern Time (AEST)', utcOffset: 10 },
+];
+
 export function ConfigurationTab() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [config, setConfig] = useState<Record<string, any>>({});
+  const [pendingChanges, setPendingChanges] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentTimes, setCurrentTimes] = useState<Record<string, string>>({});
 
   // For now, we'll use a mock tenant ID since the tenant system isn't fully implemented
   const tenantId = user?.id || '00000000-0000-0000-0000-000000000000';
@@ -39,6 +57,35 @@ export function ConfigurationTab() {
     practice_name: '',
     timezone: 'America/New_York'
   };
+
+  // Update current times for all timezones
+  const updateCurrentTimes = () => {
+    const times: Record<string, string> = {};
+    const now = new Date();
+    
+    TIMEZONES.forEach(tz => {
+      try {
+        const time = now.toLocaleTimeString('en-US', {
+          timeZone: tz.value,
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+        times[tz.value] = time;
+      } catch (e) {
+        times[tz.value] = 'Invalid';
+      }
+    });
+    
+    setCurrentTimes(times);
+  };
+
+  // Update times every minute
+  useEffect(() => {
+    updateCurrentTimes();
+    const interval = setInterval(updateCurrentTimes, 60000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Fetch current configuration
   useEffect(() => {
@@ -72,6 +119,7 @@ export function ConfigurationTab() {
           }
           
           setConfig(configMap);
+          setPendingChanges({});
         }
       } catch (err) {
         setError('Failed to load configuration');
@@ -84,57 +132,74 @@ export function ConfigurationTab() {
     fetchConfig();
   }, [tenantId, user]);
 
-  // Update a single configuration key
-  const updateConfig = async (key: string, value: any) => {
-    if (!user) return;
+  // Update pending changes for a configuration key
+  const updatePendingConfig = (key: string, value: any) => {
+    setError(null);
+    setPendingChanges(prev => ({ ...prev, [key]: value }));
+  };
+
+  // Save all pending changes
+  const saveAllChanges = async () => {
+    if (!user || Object.keys(pendingChanges).length === 0) return;
     
     setError(null);
     setSaving(true);
 
-    // Client-side validation for login_timeout
-    if (key === 'login_timeout') {
-      const timeout = parseInt(value, 10);
-      if (isNaN(timeout) || timeout < 1 || timeout > 20) {
-        setError('Login timeout must be between 1 and 20 minutes');
-        setSaving(false);
-        return;
-      }
-      value = timeout;
-    }
-
     try {
-      const { error } = await supabase.rpc('sp_update_config', {
-        p_tenant: tenantId,
-        p_key: key,
-        p_value: JSON.stringify(value),
-        p_user: user.id
-      });
-
-      if (error) {
-        setError(error.message);
-        toast({
-          title: 'Error',
-          description: `Failed to update ${key}: ${error.message}`,
-          variant: 'destructive'
-        });
-      } else {
-        setConfig(prev => ({ ...prev, [key]: value }));
-        toast({
-          title: 'Success',
-          description: `${key} updated successfully`
-        });
+      // Validate login_timeout if it's being changed
+      if ('login_timeout' in pendingChanges) {
+        const timeout = parseInt(pendingChanges.login_timeout, 10);
+        if (isNaN(timeout) || timeout < 1 || timeout > 20) {
+          setError('Login timeout must be between 1 and 20 minutes');
+          setSaving(false);
+          return;
+        }
+        pendingChanges.login_timeout = timeout;
       }
+
+      // Save each pending change
+      for (const [key, value] of Object.entries(pendingChanges)) {
+        const { error } = await supabase.rpc('sp_update_config', {
+          p_tenant: tenantId,
+          p_key: key,
+          p_value: JSON.stringify(value),
+          p_user: user.id
+        });
+
+        if (error) {
+          setError(`Failed to update ${key}: ${error.message}`);
+          setSaving(false);
+          return;
+        }
+      }
+
+      // Update local config state and clear pending changes
+      setConfig(prev => ({ ...prev, ...pendingChanges }));
+      setPendingChanges({});
+      
+      toast({
+        title: 'Success',
+        description: 'Configuration saved successfully'
+      });
     } catch (err) {
-      setError('Failed to update configuration');
+      setError('Failed to save configuration');
       toast({
         title: 'Error',
-        description: 'Failed to update configuration',
+        description: 'Failed to save configuration',
         variant: 'destructive'
       });
     } finally {
       setSaving(false);
     }
   };
+
+  // Get current value (pending change or saved config)
+  const getCurrentValue = (key: string) => {
+    return key in pendingChanges ? pendingChanges[key] : config[key];
+  };
+
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = Object.keys(pendingChanges).length > 0;
 
   if (!user) {
     return (
@@ -174,8 +239,8 @@ export function ConfigurationTab() {
             <Label htmlFor="practice_name">Practice Name</Label>
             <Input
               id="practice_name"
-              value={config.practice_name || ''}
-              onChange={(e) => updateConfig('practice_name', e.target.value)}
+              value={getCurrentValue('practice_name') || ''}
+              onChange={(e) => updatePendingConfig('practice_name', e.target.value)}
               placeholder="Enter your practice name"
               disabled={saving}
             />
@@ -188,8 +253,8 @@ export function ConfigurationTab() {
               type="number"
               min={1}
               max={20}
-              value={config.login_timeout || 10}
-              onChange={(e) => updateConfig('login_timeout', e.target.value)}
+              value={getCurrentValue('login_timeout') || 10}
+              onChange={(e) => updatePendingConfig('login_timeout', e.target.value)}
               disabled={saving}
             />
             <p className="text-sm text-gray-500 mt-1">
@@ -204,21 +269,36 @@ export function ConfigurationTab() {
               type="number"
               min={15}
               max={120}
-              value={config.session_duration || 50}
-              onChange={(e) => updateConfig('session_duration', parseInt(e.target.value))}
+              value={getCurrentValue('session_duration') || 50}
+              onChange={(e) => updatePendingConfig('session_duration', parseInt(e.target.value))}
               disabled={saving}
             />
           </div>
 
           <div>
             <Label htmlFor="timezone">Timezone</Label>
-            <Input
-              id="timezone"
-              value={config.timezone || 'America/New_York'}
-              onChange={(e) => updateConfig('timezone', e.target.value)}
-              placeholder="e.g., America/New_York"
+            <Select
+              value={getCurrentValue('timezone') || 'America/New_York'}
+              onValueChange={(value) => updatePendingConfig('timezone', value)}
               disabled={saving}
-            />
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select timezone" />
+              </SelectTrigger>
+              <SelectContent>
+                {TIMEZONES.map((tz) => (
+                  <SelectItem key={tz.value} value={tz.value}>
+                    <div className="flex items-center justify-between w-full">
+                      <span>{tz.label}</span>
+                      <div className="flex items-center text-sm text-gray-500 ml-2">
+                        <Clock className="h-3 w-3 mr-1" />
+                        {currentTimes[tz.value] || 'Loading...'}
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-4">
@@ -231,8 +311,8 @@ export function ConfigurationTab() {
               </div>
               <Switch
                 id="auto_save_notes"
-                checked={config.auto_save_notes || false}
-                onCheckedChange={(checked) => updateConfig('auto_save_notes', checked)}
+                checked={getCurrentValue('auto_save_notes') || false}
+                onCheckedChange={(checked) => updatePendingConfig('auto_save_notes', checked)}
                 disabled={saving}
               />
             </div>
@@ -246,20 +326,37 @@ export function ConfigurationTab() {
               </div>
               <Switch
                 id="email_notifications"
-                checked={config.email_notifications || false}
-                onCheckedChange={(checked) => updateConfig('email_notifications', checked)}
+                checked={getCurrentValue('email_notifications') || false}
+                onCheckedChange={(checked) => updatePendingConfig('email_notifications', checked)}
                 disabled={saving}
               />
             </div>
           </div>
         </div>
 
-        {saving && (
-          <div className="flex items-center space-x-2 text-blue-600">
-            <Save className="h-4 w-4 animate-spin" />
-            <span className="text-sm">Saving...</span>
+        {/* Save Button */}
+        <div className="flex items-center justify-between pt-4 border-t">
+          <div className="flex items-center space-x-2">
+            {saving && (
+              <>
+                <Save className="h-4 w-4 animate-spin" />
+                <span className="text-sm text-blue-600">Saving...</span>
+              </>
+            )}
+            {hasUnsavedChanges && !saving && (
+              <span className="text-sm text-orange-600">You have unsaved changes</span>
+            )}
           </div>
-        )}
+          
+          <Button
+            onClick={saveAllChanges}
+            disabled={!hasUnsavedChanges || saving}
+            className="bg-teal-600 hover:bg-teal-700"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            Save Configuration
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
