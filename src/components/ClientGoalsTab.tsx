@@ -34,10 +34,9 @@ const goalDescriptions = {
   financial: "Develop healthy money management habits, budgeting skills, financial planning, and work toward financial stability and goals."
 };
 
-// Helper function to check if a string is a valid UUID
-const isValidUUID = (str: string): boolean => {
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-  return uuidRegex.test(str);
+// Helper function to validate UUID format
+const validateUuid = (u: string): boolean => {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(u);
 };
 
 // Helper function to generate a UUID from a simple ID (for demo purposes)
@@ -67,10 +66,33 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
   const [hasChanges, setHasChanges] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const tenantId = user?.id || '00000000-0000-0000-0000-000000000000';
+  // Validate and ensure we have proper UUIDs
+  if (!user?.id || !validateUuid(user.id)) {
+    console.error('Invalid user ID:', user?.id);
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <p className="text-red-600">Authentication error: Invalid user ID. Please sign out and sign back in.</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
+  const tenantId = user.id; // Using user.id as tenant_id
+  
   // Convert clientId to UUID format if needed
-  const clientUUID = isValidUUID(clientId) ? clientId : generateUUIDFromId(clientId);
+  const clientUUID = validateUuid(clientId) ? clientId : generateUUIDFromId(clientId);
+
+  // Log the UUIDs for debugging
+  console.log('ClientGoalsTab Debug Info:', {
+    originalClientId: clientId,
+    clientUUID,
+    tenantId,
+    userId: user.id,
+    isClientIdValid: validateUuid(clientId),
+    isTenantIdValid: validateUuid(tenantId),
+    isUserIdValid: validateUuid(user.id)
+  });
 
   useEffect(() => {
     fetchGoals();
@@ -81,7 +103,10 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
     setError(null);
     
     try {
-      console.log('Fetching goals for client:', clientUUID, 'tenant:', tenantId);
+      console.log('Fetching goals with params:', {
+        p_client_id: clientUUID,
+        p_tenant_id: tenantId
+      });
       
       const { data, error } = await supabase.rpc('sp_get_client_goals', {
         p_client_id: clientUUID,
@@ -147,14 +172,8 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
     setError(null);
     
     try {
-      console.log('Saving goals with params:', {
-        p_client_id: clientUUID,
-        p_tenant_id: tenantId,
-        p_user_id: user.id,
-        goals
-      });
-
-      const { error } = await supabase.rpc('sp_upsert_client_goals', {
+      // Debug log all RPC parameters before calling
+      const rpcParams = {
         p_client_id: clientUUID,
         p_tenant_id: tenantId,
         p_emotional_mental: goals.emotional_mental,
@@ -165,7 +184,22 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
         p_intellectual_occupational: goals.intellectual_occupational,
         p_financial: goals.financial,
         p_user_id: user.id
-      });
+      };
+
+      console.log('Saving goals with RPC params:', rpcParams);
+
+      // Validate all UUID parameters before making the call
+      if (!validateUuid(rpcParams.p_client_id)) {
+        throw new Error(`Invalid client UUID: ${rpcParams.p_client_id}`);
+      }
+      if (!validateUuid(rpcParams.p_tenant_id)) {
+        throw new Error(`Invalid tenant UUID: ${rpcParams.p_tenant_id}`);
+      }
+      if (!validateUuid(rpcParams.p_user_id)) {
+        throw new Error(`Invalid user UUID: ${rpcParams.p_user_id}`);
+      }
+
+      const { error } = await supabase.rpc('sp_upsert_client_goals', rpcParams);
 
       console.log('Goals save result:', { error });
 
@@ -187,10 +221,11 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
       });
     } catch (err) {
       console.error('Exception saving goals:', err);
-      setError('Failed to save goals');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save goals';
+      setError(errorMessage);
       toast({
         title: 'Error',
-        description: 'Failed to save client goals',
+        description: errorMessage,
         variant: 'destructive'
       });
     } finally {
