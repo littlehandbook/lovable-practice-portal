@@ -3,7 +3,7 @@ import React from 'react';
 import { ClientLayout } from '@/components/layouts/ClientLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, FileText, Video, Upload } from 'lucide-react';
+import { Calendar, FileText, Video, Upload, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const ClientDashboard = () => {

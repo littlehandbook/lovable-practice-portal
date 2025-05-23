@@ -56,9 +56,11 @@ const ClientDocumentsPage = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-2xl font-bold tracking-tight">Documents & Notes</h1>
           <label htmlFor="file-upload">
-            <Button className="bg-purple-600 hover:bg-purple-700" as="span">
-              <Upload className="h-4 w-4 mr-2" />
-              Upload Document
+            <Button className="bg-purple-600 hover:bg-purple-700" asChild>
+              <span>
+                <Upload className="h-4 w-4 mr-2" />
+                Upload Document
+              </span>
             </Button>
             <input 
               id="file-upload" 
@@ -195,8 +197,8 @@ const ClientDocumentsPage = () => {
                     <Upload className="h-12 w-12 mx-auto text-gray-400 mb-2" />
                     <p className="text-gray-500 mb-4">You haven't uploaded any documents yet</p>
                     <label htmlFor="file-upload-empty">
-                      <Button className="bg-purple-600 hover:bg-purple-700" as="span">
-                        Upload Document
+                      <Button className="bg-purple-600 hover:bg-purple-700" asChild>
+                        <span>Upload Document</span>
                       </Button>
                       <input 
                         id="file-upload-empty" 
