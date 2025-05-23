@@ -71,15 +71,23 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
         p_tenant_id: tenantId
       });
 
+      console.log('Goals fetch result:', { data, error });
+
       if (error) {
         console.error('Error fetching goals:', error);
         setError('Failed to load client goals');
+        toast({
+          title: 'Error',
+          description: `Failed to load client goals: ${error.message}`,
+          variant: 'destructive'
+        });
         return;
       }
 
-      // Only update if we have data, preserving empty string defaults
+      // Handle empty array gracefully - keep default empty strings
       if (data && data.length > 0) {
         const goalData = data[0];
+        console.log('Setting goals from data:', goalData);
         setGoals(prev => ({
           emotional_mental: goalData.emotional_mental || '',
           physical: goalData.physical || '',
@@ -89,11 +97,18 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
           intellectual_occupational: goalData.intellectual_occupational || '',
           financial: goalData.financial || ''
         }));
+      } else {
+        console.log('No goals data found, keeping default empty state');
+        // Keep the default empty state - no need to update
       }
-      // If no data, keep the empty string defaults
     } catch (err) {
       console.error('Exception fetching goals:', err);
       setError('Failed to load client goals');
+      toast({
+        title: 'Error',
+        description: 'Failed to load client goals',
+        variant: 'destructive'
+      });
     } finally {
       setLoading(false);
     }
@@ -134,6 +149,8 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
         p_financial: goals.financial,
         p_user_id: user.id
       });
+
+      console.log('Goals save result:', { error });
 
       if (error) {
         console.error('Error saving goals:', error);
@@ -181,7 +198,7 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
       </div>
       <Textarea
         id={key}
-        value={goals[key] || ''} // Ensure we always have a string value
+        value={goals[key]} // Always guaranteed to be a string now
         onChange={(e) => handleGoalChange(key, e.target.value)}
         placeholder={`Enter ${label.toLowerCase()} goals...`}
         disabled={saving}
