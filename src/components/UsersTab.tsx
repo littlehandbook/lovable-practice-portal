@@ -41,38 +41,15 @@ export function UsersTab() {
   const [newUserLastName, setNewUserLastName] = useState('');
   const [newUserRole, setNewUserRole] = useState<'admin' | 'practitioner'>('practitioner');
 
-  // Mock page permissions (replace with actual data from API)
-  const [pagePermissions, setPagePermissions] = useState<PagePermission[]>([
-    {
-      id: '1',
-      page_path: '/practice/clients',
-      page_name: 'Clients',
-      roles: ['owner', 'admin', 'practitioner']
-    },
-    {
-      id: '2',
-      page_path: '/practice/calendar',
-      page_name: 'Calendar',
-      roles: ['owner', 'admin', 'practitioner']
-    },
-    {
-      id: '3',
-      page_path: '/practice/notes',
-      page_name: 'Notes',
-      roles: ['owner', 'admin', 'practitioner']
-    },
-    {
-      id: '4',
-      page_path: '/practice/settings',
-      page_name: 'Settings',
-      roles: ['owner', 'admin']
-    }
-  ]);
+  // Page permissions state - now connected to real database
+  const [pagePermissions, setPagePermissions] = useState<PagePermission[]>([]);
+  const [permissionsLoading, setPermissionsLoading] = useState(true);
   
   const tenantId = user?.id || '00000000-0000-0000-0000-000000000000';
 
   useEffect(() => {
     fetchUsers();
+    fetchPagePermissions();
   }, [tenantId]);
 
   const fetchUsers = async () => {
@@ -93,6 +70,27 @@ export function UsersTab() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPagePermissions = async () => {
+    setPermissionsLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('sp_get_page_permissions', {
+        p_tenant_id: tenantId
+      });
+
+      if (error) throw error;
+      setPagePermissions(data || []);
+    } catch (error) {
+      console.error('Error fetching page permissions:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load page permissions',
+        variant: 'destructive'
+      });
+    } finally {
+      setPermissionsLoading(false);
     }
   };
 
@@ -158,27 +156,68 @@ export function UsersTab() {
     }
   };
 
-  const toggleRolePermission = (pageId: string, role: string) => {
-    setPagePermissions(prevPermissions => 
-      prevPermissions.map(page => {
-        if (page.id === pageId) {
-          const hasRole = page.roles.includes(role);
-          return {
-            ...page,
-            roles: hasRole 
-              ? page.roles.filter(r => r !== role)
-              : [...page.roles, role]
-          };
-        }
-        return page;
-      })
-    );
-    
-    // This would normally save to database
-    toast({
-      title: 'Permissions Updated',
-      description: 'Page permissions have been updated',
-    });
+  const toggleRolePermission = async (pageId: string, role: string) => {
+    try {
+      const permission = pagePermissions.find(p => p.id === pageId);
+      if (!permission) return;
+
+      const hasRole = permission.roles.includes(role);
+      const newRoles = hasRole 
+        ? permission.roles.filter(r => r !== role)
+        : [...permission.roles, role];
+
+      // Update in database
+      const { error } = await supabase.rpc('sp_update_page_permissions', {
+        p_tenant_id: tenantId,
+        p_page_id: pageId,
+        p_allowed_roles: newRoles,
+        p_user_id: user?.id || '00000000-0000-0000-0000-000000000000'
+      });
+
+      if (error) throw error;
+
+      // Update local state
+      setPagePermissions(prevPermissions => 
+        prevPermissions.map(page => {
+          if (page.id === pageId) {
+            return {
+              ...page,
+              roles: newRoles
+            };
+          }
+          return page;
+        })
+      );
+      
+      toast({
+        title: 'Permissions Updated',
+        description: 'Page permissions have been updated',
+      });
+    } catch (error) {
+      console.error('Error updating permissions:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update permissions',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const saveAllPermissions = async () => {
+    try {
+      // All permissions are saved individually when toggled, so this is just a confirmation
+      toast({
+        title: 'Changes Saved',
+        description: 'All page permissions have been saved',
+      });
+    } catch (error) {
+      console.error('Error saving permissions:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save permissions',
+        variant: 'destructive'
+      });
+    }
   };
 
   if (loading) {
@@ -333,69 +372,70 @@ export function UsersTab() {
             <CardTitle>Page Permissions</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Page</TableHead>
-                    <TableHead className="text-center">Owner</TableHead>
-                    <TableHead className="text-center">Admin</TableHead>
-                    <TableHead className="text-center">Practitioner</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pagePermissions.map((page) => (
-                    <TableRow key={page.id}>
-                      <TableCell className="font-medium">{page.page_name}</TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex justify-center">
-                          <input 
-                            type="checkbox" 
-                            checked={page.roles.includes('owner')} 
-                            onChange={() => toggleRolePermission(page.id, 'owner')}
-                            disabled={true} // Owner always has access to everything
-                            className="h-4 w-4"
-                          />
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex justify-center">
-                          <input 
-                            type="checkbox" 
-                            checked={page.roles.includes('admin')} 
-                            onChange={() => toggleRolePermission(page.id, 'admin')}
-                            className="h-4 w-4" 
-                          />
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex justify-center">
-                          <input 
-                            type="checkbox" 
-                            checked={page.roles.includes('practitioner')} 
-                            onChange={() => toggleRolePermission(page.id, 'practitioner')}
-                            className="h-4 w-4" 
-                          />
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            <div className="mt-4">
-              <Button 
-                className="bg-teal-600 hover:bg-teal-700"
-                onClick={() => {
-                  toast({
-                    title: 'Changes Saved',
-                    description: 'Page permissions have been updated',
-                  });
-                }}
-              >
-                Save Permissions
-              </Button>
-            </div>
+            {permissionsLoading ? (
+              <p className="text-gray-500">Loading permissions...</p>
+            ) : (
+              <>
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Page</TableHead>
+                        <TableHead className="text-center">Owner</TableHead>
+                        <TableHead className="text-center">Admin</TableHead>
+                        <TableHead className="text-center">Practitioner</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pagePermissions.map((page) => (
+                        <TableRow key={page.id}>
+                          <TableCell className="font-medium">{page.page_name}</TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex justify-center">
+                              <input 
+                                type="checkbox" 
+                                checked={page.roles.includes('owner')} 
+                                onChange={() => toggleRolePermission(page.id, 'owner')}
+                                disabled={true} // Owner always has access to everything
+                                className="h-4 w-4"
+                              />
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex justify-center">
+                              <input 
+                                type="checkbox" 
+                                checked={page.roles.includes('admin')} 
+                                onChange={() => toggleRolePermission(page.id, 'admin')}
+                                className="h-4 w-4" 
+                              />
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex justify-center">
+                              <input 
+                                type="checkbox" 
+                                checked={page.roles.includes('practitioner')} 
+                                onChange={() => toggleRolePermission(page.id, 'practitioner')}
+                                className="h-4 w-4" 
+                              />
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="mt-4">
+                  <Button 
+                    className="bg-teal-600 hover:bg-teal-700"
+                    onClick={saveAllPermissions}
+                  >
+                    Save Permissions
+                  </Button>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </TabsContent>
