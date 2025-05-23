@@ -129,6 +129,42 @@ export type Database = {
           },
         ]
       }
+      tbl_branding: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          logo_url: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          tenant_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          tenant_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          logo_url?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       tbl_client_goals: {
         Row: {
           client_id: string
@@ -396,6 +432,15 @@ export type Database = {
         Args: { p_practice_name: string }
         Returns: string
       }
+      sp_get_branding: {
+        Args: { p_tenant_id: string }
+        Returns: {
+          logo_url: string
+          primary_color: string
+          secondary_color: string
+          practice_name: string
+        }[]
+      }
       sp_get_client_goals: {
         Args: { p_client_id: string; p_tenant_id: string }
         Returns: {
@@ -442,6 +487,17 @@ export type Database = {
       }
       sp_update_config: {
         Args: { p_tenant: string; p_key: string; p_value: Json; p_user: string }
+        Returns: undefined
+      }
+      sp_upsert_branding: {
+        Args: {
+          p_tenant_id: string
+          p_logo_url: string
+          p_primary_color: string
+          p_secondary_color: string
+          p_practice_name: string
+          p_user_id: string
+        }
         Returns: undefined
       }
       sp_upsert_client_goals: {

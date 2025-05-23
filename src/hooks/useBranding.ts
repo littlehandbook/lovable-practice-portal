@@ -106,8 +106,11 @@ export function useBranding() {
     try {
       console.log('Saving branding with params:', {
         p_tenant_id: tenantId,
-        p_user_id: user.id,
-        ...brandingData
+        p_logo_url: brandingData.logo_url || branding.logo_url,
+        p_primary_color: brandingData.primary_color || branding.primary_color,
+        p_secondary_color: brandingData.secondary_color || branding.secondary_color,
+        p_practice_name: brandingData.practice_name || branding.practice_name,
+        p_user_id: user.id
       });
 
       const { error } = await supabase.rpc('sp_upsert_branding', {
