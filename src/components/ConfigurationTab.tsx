@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,13 +46,12 @@ export function ConfigurationTab() {
 
   const tenantId = user?.id || '00000000-0000-0000-0000-000000000000';
 
-  // Default configuration schema
+  // Default configuration schema - removed practice_name
   const defaultConfig = {
     login_timeout: 10,
     session_duration: 50,
     auto_save_notes: true,
     email_notifications: true,
-    practice_name: '',
     timezone: 'America/New_York'
   };
 
@@ -242,17 +240,6 @@ export function ConfigurationTab() {
         )}
 
         <div className="grid gap-6">
-          <div>
-            <Label htmlFor="practice_name">Practice Name</Label>
-            <Input
-              id="practice_name"
-              value={getCurrentValue('practice_name') || ''}
-              onChange={(e) => updatePendingConfig('practice_name', e.target.value)}
-              placeholder="Enter your practice name"
-              disabled={saving}
-            />
-          </div>
-
           <div>
             <Label htmlFor="login_timeout">Login Timeout (minutes)</Label>
             <Input

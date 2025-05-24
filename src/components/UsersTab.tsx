@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -131,7 +132,7 @@ export function UsersTab() {
         const typedUsers: User[] = (data as DatabaseUser[] || []).map(dbUser => ({
           user_id: dbUser.user_id,
           email: dbUser.email,
-          role: dbUser.role as 'owner' | 'admin' | 'practitioner', // Type assertion since we control the data
+          role: dbUser.role as 'owner' | 'admin' | 'practitioner',
           created_at: dbUser.created_at,
           first_name: dbUser.first_name,
           last_name: dbUser.last_name
@@ -212,7 +213,7 @@ export function UsersTab() {
       if (!therapistData || therapistData.length === 0) {
         // Create new therapist
         const { data: newTherapist, error: createError } = await supabase.rpc('sp_register_therapist', {
-          p_auth_id: crypto.randomUUID(), // This would normally be handled by auth system
+          p_auth_id: crypto.randomUUID(),
           p_email: newUserEmail,
           p_full_name: `${newUserFirstName} ${newUserLastName}`
         });
@@ -345,13 +346,23 @@ export function UsersTab() {
     return pagePermissions.filter(p => p.page_path === pagePath);
   };
 
-  // Fixed function to remove duplicates and provide unique roles
+  // Fixed function to provide unique roles without duplication
   const getAvailableRoles = () => {
     const baseRoles = ['owner', 'admin', 'practitioner'];
     const customRoles = roles.map(r => r.role_name);
     
-    // Remove duplicates by creating a Set and converting back to array
-    return [...new Set([...baseRoles, ...customRoles])];
+    // Remove duplicates and filter out custom roles that match base roles
+    const filteredCustomRoles = customRoles.filter(role => !baseRoles.includes(role));
+    
+    return [...baseRoles, ...filteredCustomRoles];
+  };
+
+  // Get roles for user dropdown (exclude owner)
+  const getUserDropdownRoles = () => {
+    const baseRoles = ['admin', 'practitioner'];
+    const customRoles = roles.map(r => r.role_name).filter(role => !baseRoles.includes(role));
+    
+    return [...baseRoles, ...customRoles];
   };
 
   if (loading && rolesLoading) {
@@ -432,11 +443,9 @@ export function UsersTab() {
                         <SelectValue placeholder="Select role" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="practitioner">Practitioner</SelectItem>
-                        {roles.map((role) => (
-                          <SelectItem key={role.id} value={role.role_name}>
-                            {role.role_name}
+                        {getUserDropdownRoles().map((role) => (
+                          <SelectItem key={role} value={role}>
+                            {role}
                           </SelectItem>
                         ))}
                       </SelectContent>

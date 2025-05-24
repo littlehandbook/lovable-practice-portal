@@ -78,11 +78,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <img 
                 src={branding.logo_url} 
                 alt="Practice logo" 
-                className="h-8 w-8 object-contain"
+                className="h-8 w-8 object-contain flex-shrink-0"
               />
             )}
             <h1 
-              className="text-xl font-bold"
+              className="text-xl font-bold truncate"
               style={{ color: primaryColor }}
             >
               {practiceName}
@@ -148,11 +148,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <img 
                 src={branding.logo_url} 
                 alt="Practice logo" 
-                className="h-6 w-6 object-contain"
+                className="h-6 w-6 object-contain flex-shrink-0"
               />
             )}
             <h1 
-              className="text-xl font-bold"
+              className="text-xl font-bold truncate"
               style={{ color: primaryColor }}
             >
               {practiceName}

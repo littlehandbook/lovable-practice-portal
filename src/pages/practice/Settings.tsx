@@ -18,11 +18,10 @@ const SettingsPage = () => {
   const { updateProfile, changePassword, loading: profileLoading } = useProfile();
   const [activeTab, setActiveTab] = useState('profile');
   
-  // Profile form state
+  // Profile form state - removed practice_name
   const [profileForm, setProfileForm] = useState({
     fullName: '',
     phone: '',
-    practiceName: '',
     licenseNumber: ''
   });
 
@@ -39,7 +38,6 @@ const SettingsPage = () => {
     const success = await updateProfile({
       full_name: profileForm.fullName,
       phone: profileForm.phone,
-      practice_name: profileForm.practiceName,
       license_number: profileForm.licenseNumber
     });
 
@@ -143,16 +141,6 @@ const SettingsPage = () => {
                           placeholder="PSY12345" 
                         />
                       </div>
-                    </div>
-                    
-                    <div>
-                      <Label htmlFor="practiceName">Practice Name</Label>
-                      <Input 
-                        id="practiceName" 
-                        value={profileForm.practiceName}
-                        onChange={(e) => setProfileForm(prev => ({ ...prev, practiceName: e.target.value }))}
-                        placeholder="Wellness Therapy Center" 
-                      />
                     </div>
                     
                     <div className="flex justify-end">
