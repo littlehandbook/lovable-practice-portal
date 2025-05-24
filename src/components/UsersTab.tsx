@@ -2,11 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
-import { User, ShieldCheck } from 'lucide-react';
+import { User, ShieldCheck, Settings } from 'lucide-react';
 import { UserService } from '@/service/UserService';
 import { User as UserType, UserRole, PagePermission } from '@/repository/UserRepository';
 import { UserManagementTab } from './users/UserManagementTab';
 import { RoleManagementTab } from './users/RoleManagementTab';
+import { NewRoleManagementTab } from './users/NewRoleManagementTab';
 import { CurrentUsersTable } from './users/CurrentUsersTable';
 import { PagePermissionsTab } from './users/PagePermissionsTab';
 
@@ -100,10 +101,14 @@ export function UsersTab() {
 
   return (
     <Tabs defaultValue="users" className="w-full">
-      <TabsList className="grid grid-cols-2 w-full max-w-md">
+      <TabsList className="grid grid-cols-3 w-full max-w-md">
         <TabsTrigger value="users">
           <User className="h-4 w-4 mr-2" />
           User Management
+        </TabsTrigger>
+        <TabsTrigger value="roles">
+          <Settings className="h-4 w-4 mr-2" />
+          Role Management
         </TabsTrigger>
         <TabsTrigger value="permissions">
           <ShieldCheck className="h-4 w-4 mr-2" />
@@ -137,6 +142,10 @@ export function UsersTab() {
           loading={loading}
           error={usersError}
         />
+      </TabsContent>
+
+      <TabsContent value="roles" className="space-y-6">
+        <NewRoleManagementTab />
       </TabsContent>
 
       <TabsContent value="permissions" className="space-y-6">
