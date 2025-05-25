@@ -1,54 +1,168 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ClientLayout } from '@/components/layouts/ClientLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Upload, FileText, Download, X, Check } from 'lucide-react';
+import { Upload, FileText, Download, X, Check, AlertCircle } from 'lucide-react';
+import { DocumentService, Document } from '@/services/DocumentService';
+import { useToast } from '@/hooks/use-toast';
 
 const ClientDocumentsPage = () => {
   const [activeTab, setActiveTab] = useState('notes');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [sessionNotes, setSessionNotes] = useState<Document[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
   
-  // Mock data
-  const sessionNotes = [
-    { id: 1, title: 'Session Notes - May 18, 2023', date: 'May 18, 2023', status: 'Shared' },
-    { id: 2, title: 'Session Notes - May 11, 2023', date: 'May 11, 2023', status: 'Shared' },
-    { id: 3, title: 'Treatment Plan Updates', date: 'May 4, 2023', status: 'Shared' }
-  ];
-  
-  const myDocuments = [
-    { id: 1, name: 'Insurance Card.jpg', uploadedDate: 'May 10, 2023', size: '1.2 MB', status: 'Uploaded' },
-    { id: 2, title: 'Intake Form.pdf', uploadedDate: 'May 10, 2023', size: '245 KB', status: 'Uploaded' }
-  ];
+  useEffect(() => {
+    loadDocuments();
+  }, []);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      simulateUpload(e.target.files[0].name);
+  const loadDocuments = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await DocumentService.getClientDocuments();
+      if (error) {
+        toast({
+          title: "Error",
+          description: error,
+          variant: "destructive"
+        });
+      } else {
+        // Separate client uploads from session notes
+        const clientDocs = data.filter(doc => doc.document_type === 'client_upload');
+        const notes = data.filter(doc => doc.document_type === 'session_notes' && doc.is_shared_with_client);
+        setDocuments(clientDocs);
+        setSessionNotes(notes);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to load documents",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const simulateUpload = (fileName: string) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      
+      // Validate file size (10MB limit)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Maximum file size is 10MB",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      await uploadDocument(file);
+    }
+  };
+
+  const uploadDocument = async (file: File) => {
     setUploading(true);
     setUploadProgress(0);
     
-    // Simulate an upload with progress
-    const interval = setInterval(() => {
-      setUploadProgress(prev => {
-        const newProgress = prev + 10;
-        if (newProgress >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            setUploading(false);
-            // In a real app, we'd update the documents list here
-          }, 500);
-          return 100;
-        }
-        return newProgress;
+    try {
+      // Simulate progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 100);
+
+      const { data, error } = await DocumentService.uploadDocument(file);
+      
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      
+      if (error) {
+        toast({
+          title: "Upload failed",
+          description: error,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Upload successful",
+          description: `${file.name} has been uploaded successfully`,
+        });
+        // Refresh documents list
+        await loadDocuments();
+      }
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message,
+        variant: "destructive"
       });
-    }, 300);
+    } finally {
+      setTimeout(() => {
+        setUploading(false);
+        setUploadProgress(0);
+      }, 1000);
+    }
   };
+
+  const handleDownload = async (document: Document) => {
+    try {
+      const { data, error } = await DocumentService.downloadDocument(document.file_path);
+      if (error) {
+        toast({
+          title: "Download failed",
+          description: error,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data) {
+        const url = URL.createObjectURL(data);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = document.name;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Download failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return 'Unknown size';
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  if (loading) {
+    return (
+      <ClientLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+        </div>
+      </ClientLayout>
+    );
+  }
 
   return (
     <ClientLayout>
@@ -56,10 +170,10 @@ const ClientDocumentsPage = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-2xl font-bold tracking-tight">Documents & Notes</h1>
           <label htmlFor="file-upload">
-            <Button className="bg-purple-600 hover:bg-purple-700" asChild>
+            <Button className="bg-purple-600 hover:bg-purple-700" asChild disabled={uploading}>
               <span>
                 <Upload className="h-4 w-4 mr-2" />
-                Upload Document
+                {uploading ? 'Uploading...' : 'Upload Document'}
               </span>
             </Button>
             <input 
@@ -68,6 +182,7 @@ const ClientDocumentsPage = () => {
               className="hidden" 
               onChange={handleFileChange}
               disabled={uploading}
+              accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
             />
           </label>
         </div>
@@ -78,9 +193,6 @@ const ClientDocumentsPage = () => {
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <p className="text-sm font-medium">Uploading document...</p>
-                  <button className="text-gray-500 hover:text-gray-700">
-                    <X className="h-4 w-4" />
-                  </button>
                 </div>
                 <div className="h-2 bg-gray-200 rounded-full">
                   <div 
@@ -115,16 +227,22 @@ const ClientDocumentsPage = () => {
                             <div className="space-y-1">
                               <div className="flex items-center">
                                 <FileText className="h-4 w-4 text-purple-600 mr-2" />
-                                <p className="font-medium">{note.title}</p>
+                                <p className="font-medium">{note.name}</p>
                               </div>
-                              <p className="text-sm text-gray-500">Shared on {note.date}</p>
+                              <p className="text-sm text-gray-500">
+                                Shared on {new Date(note.created_at).toLocaleDateString()}
+                              </p>
                             </div>
                             <div className="flex items-center">
                               <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full flex items-center mr-2">
                                 <Check className="h-3 w-3 mr-1" />
-                                {note.status}
+                                Shared
                               </span>
-                              <Button variant="outline" size="sm">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleDownload(note)}
+                              >
                                 <FileText className="h-4 w-4 mr-1" />
                                 View
                               </Button>
@@ -150,7 +268,7 @@ const ClientDocumentsPage = () => {
                 <CardTitle>My Uploaded Documents</CardTitle>
               </CardHeader>
               <CardContent>
-                {myDocuments.length > 0 || uploading ? (
+                {documents.length > 0 ? (
                   <div className="rounded-md border overflow-hidden">
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
@@ -170,19 +288,23 @@ const ClientDocumentsPage = () => {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
-                        {myDocuments.map((doc) => (
+                        {documents.map((doc) => (
                           <tr key={doc.id} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                               {doc.name}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {doc.uploadedDate}
+                              {new Date(doc.created_at).toLocaleDateString()}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {doc.size}
+                              {formatFileSize(doc.file_size)}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              <Button variant="outline" size="sm">
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleDownload(doc)}
+                              >
                                 <Download className="h-4 w-4 mr-1" />
                                 Download
                               </Button>
@@ -205,6 +327,7 @@ const ClientDocumentsPage = () => {
                         type="file" 
                         className="hidden" 
                         onChange={handleFileChange}
+                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                       />
                     </label>
                   </div>
@@ -226,7 +349,7 @@ const ClientDocumentsPage = () => {
                     <p className="font-medium text-gray-700 mb-1">Drag and drop files here</p>
                     <p className="text-sm text-gray-500 mb-4">or click to select files</p>
                     <p className="text-xs text-gray-500">
-                      Maximum file size: 10MB. Supported formats: PDF, JPG, PNG
+                      Maximum file size: 10MB. Supported formats: PDF, JPG, PNG, DOC, DOCX
                     </p>
                     <input 
                       id="drag-drop-upload" 
@@ -234,6 +357,7 @@ const ClientDocumentsPage = () => {
                       className="hidden"
                       onChange={handleFileChange} 
                       multiple
+                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                     />
                   </div>
                 </CardContent>
