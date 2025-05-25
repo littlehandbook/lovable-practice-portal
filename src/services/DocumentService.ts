@@ -64,7 +64,7 @@ export class DocumentService {
         return { data: null, error: docError.message };
       }
 
-      return { data: docData as DocumentRecord, error: null };
+      return { data: docData as unknown as DocumentRecord, error: null };
     } catch (error: any) {
       return { data: null, error: error.message };
     }
@@ -87,7 +87,7 @@ export class DocumentService {
         return { data: [], error: error.message };
       }
 
-      return { data: (data || []) as DocumentRecord[], error: null };
+      return { data: (data || []) as unknown as DocumentRecord[], error: null };
     } catch (error: any) {
       return { data: [], error: error.message };
     }
@@ -122,10 +122,12 @@ export class DocumentService {
         return { error: fetchError.message };
       }
 
+      const docData = doc as unknown as { file_path: string };
+
       // Delete from storage
       const { error: storageError } = await supabase.storage
         .from('documents')
-        .remove([doc.file_path]);
+        .remove([docData.file_path]);
 
       if (storageError) {
         console.warn('Failed to delete file from storage:', storageError.message);

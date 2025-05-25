@@ -31,7 +31,7 @@ export class ClientService {
         return { data: [], error: error.message };
       }
 
-      return { data: (data || []) as Client[], error: null };
+      return { data: (data || []) as unknown as Client[], error: null };
     } catch (error: any) {
       return { data: [], error: error.message };
     }
@@ -49,7 +49,7 @@ export class ClientService {
         return { data: null, error: error.message };
       }
 
-      return { data: data as Client, error: null };
+      return { data: data as unknown as Client, error: null };
     } catch (error: any) {
       return { data: null, error: error.message };
     }
@@ -77,7 +77,7 @@ export class ClientService {
         return { data: null, error: error.message };
       }
 
-      return { data: data as Client, error: null };
+      return { data: data as unknown as Client, error: null };
     } catch (error: any) {
       return { data: null, error: error.message };
     }
@@ -104,7 +104,7 @@ export class ClientService {
         return { data: null, error: error.message };
       }
 
-      return { data: data as Client, error: null };
+      return { data: data as unknown as Client, error: null };
     } catch (error: any) {
       return { data: null, error: error.message };
     }
