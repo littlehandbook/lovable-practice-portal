@@ -9,6 +9,27 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      roles: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tbl_audit_log: {
         Row: {
           action: string
@@ -449,6 +470,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_role: {
+        Args: { role_name: string }
+        Returns: {
+          id: string
+          name: string
+          created_at: string
+          updated_at: string
+        }[]
+      }
       dblink: {
         Args: { "": string }
         Returns: Record<string, unknown>[]
@@ -508,6 +538,28 @@ export type Database = {
       dblink_is_busy: {
         Args: { "": string }
         Returns: number
+      }
+      delete_role: {
+        Args: { role_id: string }
+        Returns: undefined
+      }
+      find_role_by_name: {
+        Args: { role_name: string }
+        Returns: {
+          id: string
+          name: string
+          created_at: string
+          updated_at: string
+        }[]
+      }
+      get_all_roles: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          name: string
+          created_at: string
+          updated_at: string
+        }[]
       }
       purge_old_audit_logs: {
         Args: Record<PropertyKey, never>
@@ -675,6 +727,15 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      update_role: {
+        Args: { role_id: string; role_name: string }
+        Returns: {
+          id: string
+          name: string
+          created_at: string
+          updated_at: string
+        }[]
       }
     }
     Enums: {
