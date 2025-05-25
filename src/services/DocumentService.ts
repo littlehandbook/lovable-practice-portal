@@ -1,20 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-
-export interface DocumentRecord {
-  id: string;
-  name: string;
-  file_path: string;
-  file_size?: number;
-  mime_type?: string;
-  document_type: 'client_upload' | 'session_notes' | 'treatment_plan' | 'assessment';
-  is_shared_with_client: boolean;
-  created_at: string;
-  client_id?: string;
-  therapist_id?: string;
-  tenant_id?: string;
-  uploaded_by?: string;
-}
+import { DocumentRecord, ServiceError } from '@/models';
 
 export class DocumentService {
   static async uploadDocument(
@@ -38,6 +24,7 @@ export class DocumentService {
         .upload(fileName, file);
 
       if (uploadError) {
+        console.error('Storage upload error:', uploadError);
         return { data: null, error: uploadError.message };
       }
 
@@ -59,13 +46,17 @@ export class DocumentService {
         .single();
 
       if (docError) {
+        console.error('Database insert error:', docError);
         // Clean up uploaded file if database insert fails
         await supabase.storage.from('documents').remove([uploadData.path]);
         return { data: null, error: docError.message };
       }
 
-      return { data: docData as unknown as DocumentRecord, error: null };
+      // TODO: remove this cast when Supabase types are regenerated
+      const document = docData as unknown as DocumentRecord;
+      return { data: document, error: null };
     } catch (error: any) {
+      console.error('Unexpected error in uploadDocument:', error);
       return { data: null, error: error.message };
     }
   }
@@ -84,11 +75,15 @@ export class DocumentService {
       const { data, error } = await query;
 
       if (error) {
+        console.error('Supabase error in getClientDocuments:', error);
         return { data: [], error: error.message };
       }
 
-      return { data: (data || []) as unknown as DocumentRecord[], error: null };
+      // TODO: remove this cast when Supabase types are regenerated
+      const documents = (data || []) as unknown as DocumentRecord[];
+      return { data: documents, error: null };
     } catch (error: any) {
+      console.error('Unexpected error in getClientDocuments:', error);
       return { data: [], error: error.message };
     }
   }
@@ -100,11 +95,13 @@ export class DocumentService {
         .download(filePath);
 
       if (error) {
+        console.error('Storage download error:', error);
         return { data: null, error: error.message };
       }
 
       return { data, error: null };
     } catch (error: any) {
+      console.error('Unexpected error in downloadDocument:', error);
       return { data: null, error: error.message };
     }
   }
@@ -119,9 +116,11 @@ export class DocumentService {
         .single();
 
       if (fetchError) {
+        console.error('Error fetching document for deletion:', fetchError);
         return { error: fetchError.message };
       }
 
+      // TODO: remove this cast when Supabase types are regenerated
       const docData = doc as unknown as { file_path: string };
 
       // Delete from storage
@@ -140,11 +139,13 @@ export class DocumentService {
         .eq('id', documentId);
 
       if (dbError) {
+        console.error('Database delete error:', dbError);
         return { error: dbError.message };
       }
 
       return { error: null };
     } catch (error: any) {
+      console.error('Unexpected error in deleteDocument:', error);
       return { error: error.message };
     }
   }

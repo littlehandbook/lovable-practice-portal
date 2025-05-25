@@ -1,23 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-
-export interface Client {
-  id: string;
-  name: string;
-  email?: string;
-  phone?: string;
-  address?: string;
-  date_of_birth?: string;
-  emergency_contact?: string;
-  insurance_provider?: string;
-  insurance_id?: string;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-  tenant_id?: string;
-  created_by?: string;
-  updated_by?: string;
-}
+import { Client, ServiceError } from '@/models';
 
 export class ClientService {
   static async getClients(): Promise<{ data: Client[]; error: string | null }> {
@@ -28,11 +11,15 @@ export class ClientService {
         .order('name');
 
       if (error) {
+        console.error('Supabase error in getClients:', error);
         return { data: [], error: error.message };
       }
 
-      return { data: (data || []) as unknown as Client[], error: null };
+      // TODO: remove this cast when Supabase types are regenerated
+      const clients = (data || []) as unknown as Client[];
+      return { data: clients, error: null };
     } catch (error: any) {
+      console.error('Unexpected error in getClients:', error);
       return { data: [], error: error.message };
     }
   }
@@ -46,11 +33,15 @@ export class ClientService {
         .single();
 
       if (error) {
+        console.error('Supabase error in getClient:', error);
         return { data: null, error: error.message };
       }
 
-      return { data: data as unknown as Client, error: null };
+      // TODO: remove this cast when Supabase types are regenerated
+      const client = data as unknown as Client;
+      return { data: client, error: null };
     } catch (error: any) {
+      console.error('Unexpected error in getClient:', error);
       return { data: null, error: error.message };
     }
   }
@@ -74,11 +65,15 @@ export class ClientService {
         .single();
 
       if (error) {
+        console.error('Supabase error in createClient:', error);
         return { data: null, error: error.message };
       }
 
-      return { data: data as unknown as Client, error: null };
+      // TODO: remove this cast when Supabase types are regenerated
+      const client = data as unknown as Client;
+      return { data: client, error: null };
     } catch (error: any) {
+      console.error('Unexpected error in createClient:', error);
       return { data: null, error: error.message };
     }
   }
@@ -101,11 +96,15 @@ export class ClientService {
         .single();
 
       if (error) {
+        console.error('Supabase error in updateClient:', error);
         return { data: null, error: error.message };
       }
 
-      return { data: data as unknown as Client, error: null };
+      // TODO: remove this cast when Supabase types are regenerated
+      const client = data as unknown as Client;
+      return { data: client, error: null };
     } catch (error: any) {
+      console.error('Unexpected error in updateClient:', error);
       return { data: null, error: error.message };
     }
   }

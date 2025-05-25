@@ -1,130 +1,137 @@
 
 import { supabase } from '@/integrations/supabase/client';
-
-export interface Session {
-  id: string;
-  tenant_id: string;
-  client_id: string;
-  therapist_id: string;
-  session_date: string;
-  session_time: string;
-  session_type: 'Video' | 'In-person' | 'Phone';
-  status: 'Scheduled' | 'Completed' | 'Cancelled' | 'No-show';
-  duration_minutes: number;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface SessionWithClient extends Session {
-  client: {
-    id: string;
-    name: string;
-    email?: string;
-  };
-}
+import { Session, SessionNote, ServiceError } from '@/models';
 
 export class SessionService {
-  static async getSessions(therapistId?: string): Promise<{ data: Session[]; error: string | null }> {
+  static async getSessions(clientId?: string): Promise<{ data: Session[]; error: string | null }> {
     try {
       let query = supabase
         .from('tbl_sessions' as any)
         .select('*')
         .order('session_date', { ascending: false });
 
-      if (therapistId) {
-        query = query.eq('therapist_id', therapistId);
+      if (clientId) {
+        query = query.eq('client_id', clientId);
       }
 
       const { data, error } = await query;
 
       if (error) {
+        console.error('Supabase error in getSessions:', error);
         return { data: [], error: error.message };
       }
 
-      return { data: (data || []) as unknown as Session[], error: null };
+      // TODO: remove this cast when Supabase types are regenerated
+      const sessions = (data || []) as unknown as Session[];
+      return { data: sessions, error: null };
     } catch (error: any) {
+      console.error('Unexpected error in getSessions:', error);
       return { data: [], error: error.message };
     }
   }
 
-  static async getSessionsWithClients(therapistId?: string): Promise<{ data: SessionWithClient[]; error: string | null }> {
+  static async getSession(sessionId: string): Promise<{ data: Session | null; error: string | null }> {
     try {
-      let query = supabase
+      const { data, error } = await supabase
         .from('tbl_sessions' as any)
-        .select(`
-          *,
-          client:tbl_clients(id, name, email)
-        `)
-        .order('session_date', { ascending: false });
-
-      if (therapistId) {
-        query = query.eq('therapist_id', therapistId);
-      }
-
-      const { data, error } = await query;
+        .select('*')
+        .eq('id', sessionId)
+        .single();
 
       if (error) {
-        return { data: [], error: error.message };
+        console.error('Supabase error in getSession:', error);
+        return { data: null, error: error.message };
       }
 
-      return { data: (data || []) as unknown as SessionWithClient[], error: null };
+      // TODO: remove this cast when Supabase types are regenerated
+      const session = data as unknown as Session;
+      return { data: session, error: null };
     } catch (error: any) {
-      return { data: [], error: error.message };
+      console.error('Unexpected error in getSession:', error);
+      return { data: null, error: error.message };
     }
   }
 
   static async createSession(sessionData: Omit<Session, 'id' | 'created_at' | 'updated_at'>): Promise<{ data: Session | null; error: string | null }> {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { data: null, error: 'User not authenticated' };
+      }
+
       const { data, error } = await supabase
         .from('tbl_sessions' as any)
-        .insert(sessionData)
+        .insert({
+          ...sessionData,
+          tenant_id: user.user_metadata?.tenant_id
+        })
         .select()
         .single();
 
       if (error) {
+        console.error('Supabase error in createSession:', error);
         return { data: null, error: error.message };
       }
 
-      return { data: data as unknown as Session, error: null };
+      // TODO: remove this cast when Supabase types are regenerated
+      const session = data as unknown as Session;
+      return { data: session, error: null };
     } catch (error: any) {
+      console.error('Unexpected error in createSession:', error);
       return { data: null, error: error.message };
     }
   }
 
-  static async updateSession(sessionId: string, sessionData: Partial<Omit<Session, 'id' | 'created_at' | 'updated_at'>>): Promise<{ data: Session | null; error: string | null }> {
+  static async getSessionNotes(sessionId: string): Promise<{ data: SessionNote[]; error: string | null }> {
     try {
       const { data, error } = await supabase
-        .from('tbl_sessions' as any)
-        .update(sessionData)
-        .eq('id', sessionId)
+        .from('tbl_session_notes' as any)
+        .select('*')
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Supabase error in getSessionNotes:', error);
+        return { data: [], error: error.message };
+      }
+
+      // TODO: remove this cast when Supabase types are regenerated
+      const notes = (data || []) as unknown as SessionNote[];
+      return { data: notes, error: null };
+    } catch (error: any) {
+      console.error('Unexpected error in getSessionNotes:', error);
+      return { data: [], error: error.message };
+    }
+  }
+
+  static async createSessionNote(noteData: Omit<SessionNote, 'id' | 'created_at' | 'updated_at'>): Promise<{ data: SessionNote | null; error: string | null }> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        return { data: null, error: 'User not authenticated' };
+      }
+
+      const { data, error } = await supabase
+        .from('tbl_session_notes' as any)
+        .insert({
+          ...noteData,
+          created_by: user.id,
+          updated_by: user.id
+        })
         .select()
         .single();
 
       if (error) {
+        console.error('Supabase error in createSessionNote:', error);
         return { data: null, error: error.message };
       }
 
-      return { data: data as unknown as Session, error: null };
+      // TODO: remove this cast when Supabase types are regenerated
+      const note = data as unknown as SessionNote;
+      return { data: note, error: null };
     } catch (error: any) {
+      console.error('Unexpected error in createSessionNote:', error);
       return { data: null, error: error.message };
-    }
-  }
-
-  static async deleteSession(sessionId: string): Promise<{ error: string | null }> {
-    try {
-      const { error } = await supabase
-        .from('tbl_sessions' as any)
-        .delete()
-        .eq('id', sessionId);
-
-      if (error) {
-        return { error: error.message };
-      }
-
-      return { error: null };
-    } catch (error: any) {
-      return { error: error.message };
     }
   }
 }
