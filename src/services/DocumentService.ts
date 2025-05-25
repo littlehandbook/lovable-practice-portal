@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-export interface Document {
+export interface DocumentRecord {
   id: string;
   name: string;
   file_path: string;
@@ -12,14 +12,16 @@ export interface Document {
   created_at: string;
   client_id?: string;
   therapist_id?: string;
+  tenant_id?: string;
+  uploaded_by?: string;
 }
 
 export class DocumentService {
   static async uploadDocument(
     file: File, 
     clientId?: string, 
-    documentType: Document['document_type'] = 'client_upload'
-  ): Promise<{ data: Document | null; error: string | null }> {
+    documentType: DocumentRecord['document_type'] = 'client_upload'
+  ): Promise<{ data: DocumentRecord | null; error: string | null }> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -41,7 +43,7 @@ export class DocumentService {
 
       // Insert document record
       const { data: docData, error: docError } = await supabase
-        .from('tbl_documents')
+        .from('tbl_documents' as any)
         .insert({
           name: file.name,
           file_path: uploadData.path,
@@ -62,16 +64,16 @@ export class DocumentService {
         return { data: null, error: docError.message };
       }
 
-      return { data: docData, error: null };
+      return { data: docData as DocumentRecord, error: null };
     } catch (error: any) {
       return { data: null, error: error.message };
     }
   }
 
-  static async getClientDocuments(clientId?: string): Promise<{ data: Document[]; error: string | null }> {
+  static async getClientDocuments(clientId?: string): Promise<{ data: DocumentRecord[]; error: string | null }> {
     try {
       let query = supabase
-        .from('tbl_documents')
+        .from('tbl_documents' as any)
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -85,7 +87,7 @@ export class DocumentService {
         return { data: [], error: error.message };
       }
 
-      return { data: data || [], error: null };
+      return { data: (data || []) as DocumentRecord[], error: null };
     } catch (error: any) {
       return { data: [], error: error.message };
     }
@@ -111,7 +113,7 @@ export class DocumentService {
     try {
       // Get document to find file path
       const { data: doc, error: fetchError } = await supabase
-        .from('tbl_documents')
+        .from('tbl_documents' as any)
         .select('file_path')
         .eq('id', documentId)
         .single();
@@ -131,7 +133,7 @@ export class DocumentService {
 
       // Delete from database
       const { error: dbError } = await supabase
-        .from('tbl_documents')
+        .from('tbl_documents' as any)
         .delete()
         .eq('id', documentId);
 

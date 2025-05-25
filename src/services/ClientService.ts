@@ -14,13 +14,16 @@ export interface Client {
   notes?: string;
   created_at: string;
   updated_at: string;
+  tenant_id?: string;
+  created_by?: string;
+  updated_by?: string;
 }
 
 export class ClientService {
   static async getClients(): Promise<{ data: Client[]; error: string | null }> {
     try {
       const { data, error } = await supabase
-        .from('tbl_clients')
+        .from('tbl_clients' as any)
         .select('*')
         .order('name');
 
@@ -28,7 +31,7 @@ export class ClientService {
         return { data: [], error: error.message };
       }
 
-      return { data: data || [], error: null };
+      return { data: (data || []) as Client[], error: null };
     } catch (error: any) {
       return { data: [], error: error.message };
     }
@@ -37,7 +40,7 @@ export class ClientService {
   static async getClient(clientId: string): Promise<{ data: Client | null; error: string | null }> {
     try {
       const { data, error } = await supabase
-        .from('tbl_clients')
+        .from('tbl_clients' as any)
         .select('*')
         .eq('id', clientId)
         .single();
@@ -46,7 +49,7 @@ export class ClientService {
         return { data: null, error: error.message };
       }
 
-      return { data, error: null };
+      return { data: data as Client, error: null };
     } catch (error: any) {
       return { data: null, error: error.message };
     }
@@ -60,7 +63,7 @@ export class ClientService {
       }
 
       const { data, error } = await supabase
-        .from('tbl_clients')
+        .from('tbl_clients' as any)
         .insert({
           ...clientData,
           tenant_id: user.user_metadata?.tenant_id,
@@ -74,7 +77,7 @@ export class ClientService {
         return { data: null, error: error.message };
       }
 
-      return { data, error: null };
+      return { data: data as Client, error: null };
     } catch (error: any) {
       return { data: null, error: error.message };
     }
@@ -88,7 +91,7 @@ export class ClientService {
       }
 
       const { data, error } = await supabase
-        .from('tbl_clients')
+        .from('tbl_clients' as any)
         .update({
           ...clientData,
           updated_by: user.id
@@ -101,7 +104,7 @@ export class ClientService {
         return { data: null, error: error.message };
       }
 
-      return { data, error: null };
+      return { data: data as Client, error: null };
     } catch (error: any) {
       return { data: null, error: error.message };
     }

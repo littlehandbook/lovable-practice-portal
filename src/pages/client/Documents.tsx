@@ -5,15 +5,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Upload, FileText, Download, X, Check, AlertCircle } from 'lucide-react';
-import { DocumentService, Document } from '@/services/DocumentService';
+import { DocumentService, DocumentRecord } from '@/services/DocumentService';
 import { useToast } from '@/hooks/use-toast';
 
 const ClientDocumentsPage = () => {
   const [activeTab, setActiveTab] = useState('notes');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-  const [documents, setDocuments] = useState<Document[]>([]);
-  const [sessionNotes, setSessionNotes] = useState<Document[]>([]);
+  const [documents, setDocuments] = useState<DocumentRecord[]>([]);
+  const [sessionNotes, setSessionNotes] = useState<DocumentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   
@@ -116,7 +116,7 @@ const ClientDocumentsPage = () => {
     }
   };
 
-  const handleDownload = async (document: Document) => {
+  const handleDownload = async (document: DocumentRecord) => {
     try {
       const { data, error } = await DocumentService.downloadDocument(document.file_path);
       if (error) {
@@ -130,12 +130,12 @@ const ClientDocumentsPage = () => {
 
       if (data) {
         const url = URL.createObjectURL(data);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = document.name;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        const anchor = globalThis.document.createElement('a');
+        anchor.href = url;
+        anchor.download = document.name;
+        globalThis.document.body.appendChild(anchor);
+        anchor.click();
+        globalThis.document.body.removeChild(anchor);
         URL.revokeObjectURL(url);
       }
     } catch (error: any) {
