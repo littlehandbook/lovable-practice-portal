@@ -27,51 +27,19 @@ export function useBranding() {
   // Convert user ID to UUID format for tenant_id (user ID is already a UUID)
   const tenantId = user?.id || '00000000-0000-0000-0000-000000000000';
 
-  // Ensure tenant exists in registry before any operations
-  const ensureTenantExists = useCallback(async () => {
-    if (!user) return false;
-
-    try {
-      // Create or ignore if tenant already exists
-      const { error: tenantError } = await supabase
-        .from('tbl_tenant_registry')
-        .upsert({
-          tenant_id: tenantId,
-          practice_name: 'Default Practice',
-          status: 'active'
-        }, {
-          onConflict: 'tenant_id'
-        });
-
-      if (tenantError) {
-        console.error('Error ensuring tenant exists:', tenantError);
-        return false;
-      }
-
-      return true;
-    } catch (err) {
-      console.error('Exception ensuring tenant exists:', err);
-      return false;
-    }
-  }, [tenantId, user]);
-
   const fetchBranding = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      console.log('Fetching branding for tenant:', tenantId);
+      console.log('Fetching branding via microservice for tenant:', tenantId);
 
-      // Ensure tenant exists first
-      const tenantExists = await ensureTenantExists();
-      if (!tenantExists) {
-        setError('Failed to initialize tenant');
-        return;
-      }
-
-      // Use the stored procedure for microservice approach
-      const { data: brandingData, error: brandingError } = await supabase
-        .rpc('sp_get_branding', { p_tenant_id: tenantId });
+      const { data, error: brandingError } = await supabase.functions.invoke('branding-service', {
+        body: {
+          action: 'get',
+          tenant_id: tenantId
+        }
+      });
 
       if (brandingError) {
         console.error('Error fetching branding:', brandingError);
@@ -79,19 +47,11 @@ export function useBranding() {
         return;
       }
 
-      // Handle empty result (no branding found)
-      const result = brandingData?.[0] || {
-        logo_url: '',
-        primary_color: '#0f766e',
-        secondary_color: '#14b8a6',
-        practice_name: ''
-      };
-
       setBranding({
-        logo_url: result.logo_url || '',
-        primary_color: result.primary_color || '#0f766e',
-        secondary_color: result.secondary_color || '#14b8a6',
-        practice_name: result.practice_name || ''
+        logo_url: data.logo_url || '',
+        primary_color: data.primary_color || '#0f766e',
+        secondary_color: data.secondary_color || '#14b8a6',
+        practice_name: data.practice_name || ''
       });
 
     } catch (err) {
@@ -100,7 +60,7 @@ export function useBranding() {
     } finally {
       setLoading(false);
     }
-  }, [tenantId, ensureTenantExists]);
+  }, [tenantId]);
 
   const uploadLogo = useCallback(async (file: File) => {
     if (!user) {
@@ -160,30 +120,18 @@ export function useBranding() {
     setError(null);
 
     try {
-      console.log('Saving branding with microservice approach for tenant:', tenantId);
+      console.log('Saving branding via microservice for tenant:', tenantId);
 
-      // Ensure tenant exists first (critical step to prevent FK violations)
-      const tenantExists = await ensureTenantExists();
-      if (!tenantExists) {
-        setError('Failed to initialize tenant before saving branding');
-        toast({
-          title: 'Error',
-          description: 'Failed to initialize tenant before saving branding',
-          variant: 'destructive'
-        });
-        return false;
-      }
-
-      // Use the stored procedure for atomic upsert
-      const { error: brandingError } = await supabase
-        .rpc('sp_upsert_branding', {
-          p_tenant_id: tenantId,
-          p_logo_url: brandingData.logo_url || branding.logo_url,
-          p_primary_color: brandingData.primary_color || branding.primary_color,
-          p_secondary_color: brandingData.secondary_color || branding.secondary_color,
-          p_practice_name: brandingData.practice_name || branding.practice_name,
-          p_user_id: user.id
-        });
+      const { data, error: brandingError } = await supabase.functions.invoke('branding-service', {
+        body: {
+          action: 'upsert',
+          tenant_id: tenantId,
+          logo_url: brandingData.logo_url || branding.logo_url,
+          primary_color: brandingData.primary_color || branding.primary_color,
+          secondary_color: brandingData.secondary_color || branding.secondary_color,
+          practice_name: brandingData.practice_name || branding.practice_name
+        }
+      });
 
       if (brandingError) {
         console.error('Error saving branding:', brandingError);
@@ -216,7 +164,7 @@ export function useBranding() {
     } finally {
       setSaving(false);
     }
-  }, [user, tenantId, branding, toast, ensureTenantExists]);
+  }, [user, tenantId, branding, toast]);
 
   useEffect(() => {
     if (user) {
