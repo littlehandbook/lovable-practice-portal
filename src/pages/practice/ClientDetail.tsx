@@ -1,11 +1,11 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layouts/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ClientResourcesList } from '@/components/practice/ClientResourcesList';
-import { User, Calendar, FileText, Mail, Phone, MapPin } from 'lucide-react';
+import { SessionNotesTab } from '@/components/practice/SessionNotesTab';
+import { User, Calendar, FileText, Mail, Phone, MapPin, Stethoscope } from 'lucide-react';
 import { ClientService } from '@/services/ClientService';
 import { Client } from '@/models';
 import { useToast } from '@/hooks/use-toast';
@@ -104,7 +104,7 @@ const ClientDetailPage = () => {
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="sessions">Sessions</TabsTrigger>
-            <TabsTrigger value="notes">Notes</TabsTrigger>
+            <TabsTrigger value="notes">Session Notes</TabsTrigger>
             <TabsTrigger value="resources">Resources</TabsTrigger>
           </TabsList>
 
@@ -193,17 +193,7 @@ const ClientDetailPage = () => {
           </TabsContent>
 
           <TabsContent value="notes">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <FileText className="h-5 w-5 mr-2" />
-                  Session Notes
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-500">Notes management coming soon...</p>
-              </CardContent>
-            </Card>
+            <SessionNotesTab clientId={clientId} />
           </TabsContent>
 
           <TabsContent value="resources">

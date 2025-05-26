@@ -2,346 +2,139 @@
 import React, { useState, useEffect } from 'react';
 import { ClientLayout } from '@/components/layouts/ClientLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DocumentService } from '@/services/DocumentService';
-import { ClientResourceService } from '@/services/ClientResourceService';
-import { ClientJournalService, ClientJournalEntry } from '@/services/ClientJournalService';
-import { DocumentRecord, ClientResource } from '@/models';
-import { useToast } from '@/hooks/use-toast';
-import { UploadSection } from '@/components/client/UploadSection';
-import { UploadProgress } from '@/components/client/UploadProgress';
 import { DocumentsTab } from '@/components/client/DocumentsTab';
-import { ResourcesTab } from '@/components/client/ResourcesTab';
-import { JournalTab } from '@/components/client/JournalTab';
-import { isUUID } from '@/lib/utils';
+import { SessionNotesTab } from '@/components/client/SessionNotesTab';
+import { HomeworkTab } from '@/components/client/HomeworkTab';
+import { DocumentService } from '@/services/DocumentService';
+import { DocumentRecord } from '@/models';
+import { useToast } from '@/hooks/use-toast';
 
 const ClientDocumentsPage = () => {
-  const [activeTab, setActiveTab] = useState('journal');
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
-  const [resources, setResources] = useState<ClientResource[]>([]);
-  const [journalEntries, setJournalEntries] = useState<ClientJournalEntry[]>([]);
+  const [sessionNotes, setSessionNotes] = useState<DocumentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  
+
   useEffect(() => {
-    loadData();
-  }, []);
+    const fetchDocuments = async () => {
+      try {
+        const { data, error } = await DocumentService.getClientDocuments();
+        
+        if (error) {
+          console.error('Error fetching documents:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to load documents',
+            variant: 'destructive'
+          });
+          return;
+        }
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      await Promise.all([
-        loadDocuments(),
-        loadResources(),
-        loadJournalEntries()
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadDocuments = async () => {
-    try {
-      const { data, error } = await DocumentService.getClientDocuments();
-      if (error) {
+        // Filter documents by type
+        const clientUploads = data.filter(doc => doc.document_type === 'client_upload');
+        const sharedNotes = data.filter(doc => doc.document_type === 'session_notes' && doc.is_shared_with_client);
+        
+        setDocuments(clientUploads);
+        setSessionNotes(sharedNotes);
+      } catch (error) {
+        console.error('Unexpected error fetching documents:', error);
         toast({
-          title: "Error",
-          description: error,
-          variant: "destructive"
+          title: 'Error',
+          description: 'Failed to load documents',
+          variant: 'destructive'
         });
-      } else {
-        const clientDocs = data.filter(doc => doc.document_type === 'client_upload');
-        setDocuments(clientDocs);
+      } finally {
+        setLoading(false);
       }
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to load documents",
-        variant: "destructive"
-      });
-    }
-  };
+    };
 
-  const loadResources = async () => {
+    fetchDocuments();
+  }, [toast]);
+
+  const handleUpload = async (files: FileList) => {
     try {
-      // Use a proper UUID format for mock client ID - this is a valid UUID
-      const mockClientId = '550e8400-e29b-41d4-a716-446655440000';
+      const uploadPromises = Array.from(files).map(file => 
+        DocumentService.uploadDocument(file)
+      );
       
-      // Validate the UUID before making the call
-      if (!isUUID(mockClientId)) {
-        console.error('Mock client ID is not a valid UUID');
-        return;
-      }
-
-      const { data, error } = await ClientResourceService.getClientResources(mockClientId);
-      if (error) {
-        console.error('Failed to load resources:', error);
-      } else {
-        setResources(data);
-      }
-    } catch (error: any) {
-      console.error('Error loading resources:', error);
-    }
-  };
-
-  const loadJournalEntries = async () => {
-    try {
-      const { data, error } = await ClientJournalService.getClientJournalEntries();
-      if (error) {
-        console.error('Failed to load journal entries:', error);
-      } else {
-        setJournalEntries(data);
-      }
-    } catch (error: any) {
-      console.error('Error loading journal entries:', error);
-    }
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const file = e.target.files[0];
-      await uploadDocument(file);
-      // Reset the file input
-      e.target.value = '';
-    }
-  };
-
-  const handleFileSelect = async (file: File) => {
-    await uploadDocument(file);
-  };
-
-  const uploadDocument = async (file: File) => {
-    // Validate file size (10MB limit)
-    if (file.size > 10 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Maximum file size is 10MB",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setUploading(true);
-    setUploadProgress(0);
-    
-    try {
-      // Simulate progress
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return 90;
-          }
-          return prev + 10;
-        });
-      }, 100);
-
-      // Upload document without client_id so it appears on practitioner portal
-      const { data, error } = await DocumentService.uploadDocument(file, undefined, 'client_upload');
+      const results = await Promise.all(uploadPromises);
+      const errors = results.filter(result => result.error);
       
-      clearInterval(progressInterval);
-      setUploadProgress(100);
-      
-      if (error) {
+      if (errors.length > 0) {
         toast({
-          title: "Upload failed",
-          description: error,
-          variant: "destructive"
+          title: 'Upload Error',
+          description: `Failed to upload ${errors.length} file(s)`,
+          variant: 'destructive'
         });
       } else {
         toast({
-          title: "Upload successful",
-          description: `${file.name} has been uploaded successfully`,
+          title: 'Success',
+          description: `Successfully uploaded ${files.length} file(s)`,
         });
-        await loadDocuments();
+        
+        // Refresh documents list
+        const { data } = await DocumentService.getClientDocuments();
+        if (data) {
+          const clientUploads = data.filter(doc => doc.document_type === 'client_upload');
+          setDocuments(clientUploads);
+        }
       }
-    } catch (error: any) {
+    } catch (error) {
+      console.error('Upload error:', error);
       toast({
-        title: "Upload failed",
-        description: error.message,
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to upload files',
+        variant: 'destructive'
       });
-    } finally {
-      setTimeout(() => {
-        setUploading(false);
-        setUploadProgress(0);
-      }, 1000);
     }
   };
 
   const handleDownload = async (document: DocumentRecord) => {
     try {
-      const { data, error } = await DocumentService.downloadDocument(document.file_path);
-      if (error) {
-        toast({
-          title: "Download failed",
-          description: error,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (data) {
-        const url = URL.createObjectURL(data);
-        const anchor = globalThis.document.createElement('a');
-        anchor.href = url;
-        anchor.download = document.name;
-        globalThis.document.body.appendChild(anchor);
-        anchor.click();
-        globalThis.document.body.removeChild(anchor);
-        URL.revokeObjectURL(url);
-      }
-    } catch (error: any) {
+      await DocumentService.downloadDocument(document);
+    } catch (error) {
+      console.error('Download error:', error);
       toast({
-        title: "Download failed",
-        description: error.message,
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to download file',
+        variant: 'destructive'
       });
     }
   };
-
-  const handleResourceDownload = async (resource: ClientResource) => {
-    if (!resource.file_path) return;
-
-    try {
-      const { data, error } = await ClientResourceService.downloadResource(resource.file_path);
-      if (error) {
-        toast({
-          title: "Download failed",
-          description: error,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (data) {
-        const url = URL.createObjectURL(data);
-        const anchor = document.createElement('a');
-        anchor.href = url;
-        anchor.download = resource.title;
-        document.body.appendChild(anchor);
-        anchor.click();
-        document.body.removeChild(anchor);
-        URL.revokeObjectURL(url);
-      }
-    } catch (error: any) {
-      toast({
-        title: "Download failed",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleCreateJournalEntry = async (data: { title: string; content: string; session_date?: string; is_shared_with_practitioner?: boolean }) => {
-    const { error } = await ClientJournalService.createJournalEntry(data);
-    if (error) {
-      toast({
-        title: "Error",
-        description: error,
-        variant: "destructive"
-      });
-    } else {
-      toast({
-        title: "Success",
-        description: "Journal entry created successfully"
-      });
-      await loadJournalEntries();
-    }
-  };
-
-  const handleUpdateJournalEntry = async (data: { id: string; title?: string; content?: string; session_date?: string; is_shared_with_practitioner?: boolean }) => {
-    const { error } = await ClientJournalService.updateJournalEntry(data);
-    if (error) {
-      toast({
-        title: "Error",
-        description: error,
-        variant: "destructive"
-      });
-    } else {
-      toast({
-        title: "Success",
-        description: "Journal entry updated successfully"
-      });
-      await loadJournalEntries();
-    }
-  };
-
-  const handleDeleteJournalEntry = async (entryId: string) => {
-    const { error } = await ClientJournalService.deleteJournalEntry(entryId);
-    if (error) {
-      toast({
-        title: "Error",
-        description: error,
-        variant: "destructive"
-      });
-    } else {
-      toast({
-        title: "Success",
-        description: "Journal entry deleted successfully"
-      });
-      await loadJournalEntries();
-    }
-  };
-
-  const formatFileSize = (bytes?: number) => {
-    if (!bytes) return 'Unknown size';
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
-  };
-
-  if (loading) {
-    return (
-      <ClientLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-        </div>
-      </ClientLayout>
-    );
-  }
 
   return (
     <ClientLayout>
       <div className="space-y-6">
-        <UploadSection uploading={uploading} onFileChange={handleFileChange} />
-        
-        <UploadProgress uploading={uploading} uploadProgress={uploadProgress} />
-        
-        <Tabs defaultValue={activeTab} value={activeTab} onValueChange={setActiveTab}>
-          <TabsList>
-            <TabsTrigger value="journal">Journal</TabsTrigger>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Documents & Resources</h1>
+          <p className="text-gray-500">Manage your documents, view session notes, and track homework assignments</p>
+        </div>
+
+        <Tabs defaultValue="documents" className="space-y-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="documents">My Documents</TabsTrigger>
-            <TabsTrigger value="resources">Learning Resources</TabsTrigger>
+            <TabsTrigger value="notes">Session Notes</TabsTrigger>
+            <TabsTrigger value="homework">Homework</TabsTrigger>
           </TabsList>
-          
-          <TabsContent value="journal">
-            <JournalTab
-              journalEntries={journalEntries}
-              onCreateEntry={handleCreateJournalEntry}
-              onUpdateEntry={handleUpdateJournalEntry}
-              onDeleteEntry={handleDeleteJournalEntry}
+
+          <TabsContent value="documents">
+            <DocumentsTab 
+              documents={documents}
+              onUpload={handleUpload}
+              onDownload={handleDownload}
               loading={loading}
             />
           </TabsContent>
-          
-          <TabsContent value="documents">
-            <DocumentsTab 
-              documents={documents} 
-              formatFileSize={formatFileSize} 
-              onDownload={handleDownload} 
-              onFileChange={handleFileChange}
-              onFileSelect={handleFileSelect}
-              uploading={uploading}
+
+          <TabsContent value="notes">
+            <SessionNotesTab 
+              sessionNotes={sessionNotes}
+              onDownload={handleDownload}
             />
           </TabsContent>
-          
-          <TabsContent value="resources">
-            <ResourcesTab 
-              resources={resources} 
-              onDownload={handleResourceDownload} 
-            />
+
+          <TabsContent value="homework">
+            <HomeworkTab loading={loading} />
           </TabsContent>
         </Tabs>
       </div>
