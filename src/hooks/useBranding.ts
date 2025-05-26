@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,12 +27,47 @@ export function useBranding() {
   // Convert user ID to UUID format for tenant_id (user ID is already a UUID)
   const tenantId = user?.id || '00000000-0000-0000-0000-000000000000';
 
+  // Ensure tenant exists in registry before any operations
+  const ensureTenantExists = useCallback(async () => {
+    if (!user) return false;
+
+    try {
+      // Create or ignore if tenant already exists
+      const { error: tenantError } = await supabase
+        .from('tbl_tenant_registry')
+        .upsert({
+          tenant_id: tenantId,
+          practice_name: 'Default Practice',
+          status: 'active'
+        }, {
+          onConflict: 'tenant_id'
+        });
+
+      if (tenantError) {
+        console.error('Error ensuring tenant exists:', tenantError);
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Exception ensuring tenant exists:', err);
+      return false;
+    }
+  }, [tenantId, user]);
+
   const fetchBranding = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
       console.log('Fetching branding for tenant:', tenantId);
+
+      // Ensure tenant exists first
+      const tenantExists = await ensureTenantExists();
+      if (!tenantExists) {
+        setError('Failed to initialize tenant');
+        return;
+      }
 
       // Use the stored procedure for microservice approach
       const { data: brandingData, error: brandingError } = await supabase
@@ -64,7 +100,7 @@ export function useBranding() {
     } finally {
       setLoading(false);
     }
-  }, [tenantId]);
+  }, [tenantId, ensureTenantExists]);
 
   const uploadLogo = useCallback(async (file: File) => {
     if (!user) {
@@ -126,6 +162,18 @@ export function useBranding() {
     try {
       console.log('Saving branding with microservice approach for tenant:', tenantId);
 
+      // Ensure tenant exists first (critical step to prevent FK violations)
+      const tenantExists = await ensureTenantExists();
+      if (!tenantExists) {
+        setError('Failed to initialize tenant before saving branding');
+        toast({
+          title: 'Error',
+          description: 'Failed to initialize tenant before saving branding',
+          variant: 'destructive'
+        });
+        return false;
+      }
+
       // Use the stored procedure for atomic upsert
       const { error: brandingError } = await supabase
         .rpc('sp_upsert_branding', {
@@ -168,7 +216,7 @@ export function useBranding() {
     } finally {
       setSaving(false);
     }
-  }, [user, tenantId, branding, toast]);
+  }, [user, tenantId, branding, toast, ensureTenantExists]);
 
   useEffect(() => {
     if (user) {
