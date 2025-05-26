@@ -253,6 +253,51 @@ export type Database = {
           },
         ]
       }
+      tbl_client_journal: {
+        Row: {
+          client_id: string
+          content: string
+          created_at: string
+          created_by: string
+          id: string
+          is_shared_with_practitioner: boolean
+          session_date: string | null
+          shared_at: string | null
+          tenant_id: string
+          title: string
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          client_id: string
+          content: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_shared_with_practitioner?: boolean
+          session_date?: string | null
+          shared_at?: string | null
+          tenant_id: string
+          title: string
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          client_id?: string
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_shared_with_practitioner?: boolean
+          session_date?: string | null
+          shared_at?: string | null
+          tenant_id?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: []
+      }
       tbl_client_resources: {
         Row: {
           client_id: string
@@ -393,6 +438,54 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
         ]
+      }
+      tbl_documents: {
+        Row: {
+          client_id: string | null
+          created_at: string
+          document_type: string
+          file_path: string
+          file_size: number | null
+          id: string
+          is_shared_with_client: boolean
+          mime_type: string | null
+          name: string
+          tenant_id: string | null
+          therapist_id: string | null
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          client_id?: string | null
+          created_at?: string
+          document_type?: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          is_shared_with_client?: boolean
+          mime_type?: string | null
+          name: string
+          tenant_id?: string | null
+          therapist_id?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          client_id?: string | null
+          created_at?: string
+          document_type?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          is_shared_with_client?: boolean
+          mime_type?: string | null
+          name?: string
+          tenant_id?: string | null
+          therapist_id?: string | null
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
       }
       tbl_page_permissions: {
         Row: {

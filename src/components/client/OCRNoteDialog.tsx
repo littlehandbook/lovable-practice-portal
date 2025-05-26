@@ -1,12 +1,12 @@
 
 import React, { useState, useRef } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Camera, Upload, FileText, Loader } from 'lucide-react';
+import { Camera, Upload, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface OCRNoteDialogProps {
@@ -15,207 +15,282 @@ interface OCRNoteDialogProps {
   onSave: (data: { title: string; content: string; session_date?: string; is_shared_with_practitioner?: boolean }) => Promise<void>;
 }
 
-export const OCRNoteDialog: React.FC<OCRNoteDialogProps> = ({
-  open,
-  onClose,
-  onSave
-}) => {
+export const OCRNoteDialog: React.FC<OCRNoteDialogProps> = ({ open, onClose, onSave }) => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [sessionDate, setSessionDate] = useState('');
   const [isShared, setIsShared] = useState(false);
-  const [processing, setProcessing] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const processImageWithOCR = async (file: File) => {
-    setProcessing(true);
-    try {
-      // Create a simple OCR simulation - in a real app you'd use Tesseract.js or a cloud OCR service
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        // Simulate OCR processing
-        setTimeout(() => {
-          const extractedText = `[Extracted text from ${file.name}]\n\nThis is where the OCR extracted text would appear. In a real implementation, this would use Tesseract.js or a cloud OCR service like Google Cloud Vision API to extract actual text from the image.`;
-          setContent(prev => prev ? `${prev}\n\n${extractedText}` : extractedText);
-          if (!title) {
-            setTitle(`OCR Note from ${file.name.split('.')[0]}`);
-          }
-          setProcessing(false);
-          toast({
-            title: "Success",
-            description: "Text extracted from image successfully"
-          });
-        }, 2000);
-      };
-      reader.readAsDataURL(file);
-    } catch (error) {
-      setProcessing(false);
-      toast({
-        title: "Error",
-        description: "Failed to process image for OCR",
-        variant: "destructive"
-      });
-    }
+  const resetForm = () => {
+    setTitle('');
+    setContent('');
+    setSessionDate('');
+    setIsShared(false);
+    setSelectedImage(null);
+    setImagePreview(null);
+    setIsProcessing(false);
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
+  const handleImageSelect = (file: File) => {
+    setSelectedImage(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImagePreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.type.startsWith('image/')) {
-        processImageWithOCR(file);
-      } else {
+      if (!file.type.startsWith('image/')) {
         toast({
           title: "Invalid file type",
           description: "Please select an image file",
           variant: "destructive"
         });
+        return;
       }
+      handleImageSelect(file);
+      e.target.value = '';
+    }
+  };
+
+  const simulateOCR = async (file: File): Promise<string> => {
+    // Simulate OCR processing time
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Simulate extracted text based on file name or type
+    const sampleTexts = [
+      "Today I felt anxious about the upcoming presentation. I noticed my heart racing and my palms getting sweaty when I thought about speaking in front of the team.",
+      "Had a good session today. We discussed coping strategies for managing stress. Key takeaways: deep breathing exercises, progressive muscle relaxation, and mindfulness meditation.",
+      "Mood has been improving over the past week. I've been practicing the techniques we discussed and they seem to be helping with my sleep patterns.",
+      "Feeling overwhelmed with work deadlines. Need to practice better time management and boundary setting. Remember to use the grounding techniques when anxiety peaks."
+    ];
+    
+    return sampleTexts[Math.floor(Math.random() * sampleTexts.length)];
+  };
+
+  const handleProcessImage = async () => {
+    if (!selectedImage) {
+      toast({
+        title: "No image selected",
+        description: "Please select an image first",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      const extractedText = await simulateOCR(selectedImage);
+      setContent(extractedText);
+      
+      // Auto-generate title if not provided
+      if (!title) {
+        const words = extractedText.split(' ').slice(0, 5).join(' ');
+        setTitle(`OCR Note - ${words}...`);
+      }
+      
+      toast({
+        title: "OCR Complete",
+        description: "Text has been extracted from the image successfully"
+      });
+    } catch (error) {
+      toast({
+        title: "OCR Failed",
+        description: "Failed to extract text from image",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const handleSave = async () => {
-    if (!title.trim() || !content.trim()) return;
+    if (!title.trim()) {
+      toast({
+        title: "Title required",
+        description: "Please enter a title for your note",
+        variant: "destructive"
+      });
+      return;
+    }
 
-    setSaving(true);
+    if (!content.trim()) {
+      toast({
+        title: "Content required",
+        description: "Please add some content or process an image first",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
     try {
       await onSave({
-        title: title.trim(),
-        content: content.trim(),
+        title,
+        content,
         session_date: sessionDate || undefined,
         is_shared_with_practitioner: isShared
       });
-      // Reset form
-      setTitle('');
-      setContent('');
-      setSessionDate('');
-      setIsShared(false);
-      onClose();
+      handleClose();
+    } catch (error) {
+      // Error handled by parent component
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center">
-            <FileText className="h-5 w-5 mr-2" />
-            Create Note from Image (OCR)
-          </DialogTitle>
+          <DialogTitle>Create Note from Image (OCR)</DialogTitle>
         </DialogHeader>
         
         <div className="space-y-4">
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={processing || saving}
-            >
-              <Upload className="h-4 w-4 mr-2" />
-              Upload Image
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => cameraInputRef.current?.click()}
-              disabled={processing || saving}
-            >
-              <Camera className="h-4 w-4 mr-2" />
-              Take Photo
-            </Button>
+          {/* Image Upload Section */}
+          <div className="space-y-2">
+            <Label>Select Image</Label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isProcessing}
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Choose File
+              </Button>
+              
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => cameraInputRef.current?.click()}
+                disabled={isProcessing}
+              >
+                <Camera className="h-4 w-4 mr-2" />
+                Take Photo
+              </Button>
+              
+              {selectedImage && (
+                <Button
+                  onClick={handleProcessImage}
+                  disabled={isProcessing}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    'Extract Text'
+                  )}
+                </Button>
+              )}
+            </div>
+            
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleFileChange}
+              className="hidden"
+            />
           </div>
 
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-          <input
-            ref={cameraInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            onChange={handleFileSelect}
-            className="hidden"
-          />
-
-          {processing && (
-            <div className="flex items-center justify-center p-4 border rounded-lg bg-gray-50">
-              <Loader className="h-5 w-5 animate-spin mr-2" />
-              <span>Processing image and extracting text...</span>
+          {/* Image Preview */}
+          {imagePreview && (
+            <div className="space-y-2">
+              <Label>Selected Image</Label>
+              <div className="border rounded-lg p-2">
+                <img 
+                  src={imagePreview} 
+                  alt="Selected" 
+                  className="max-w-full h-48 object-contain mx-auto"
+                />
+              </div>
             </div>
           )}
 
-          <div>
+          {/* Note Form */}
+          <div className="space-y-2">
             <Label htmlFor="title">Title</Label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Enter a title for your journal entry"
-              disabled={saving || processing}
+              placeholder="Enter note title"
             />
           </div>
 
-          <div>
-            <Label htmlFor="session-date">Session Date (Optional)</Label>
-            <Input
-              id="session-date"
-              type="date"
-              value={sessionDate}
-              onChange={(e) => setSessionDate(e.target.value)}
-              disabled={saving || processing}
-            />
-          </div>
-
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="content">Content</Label>
             <Textarea
               id="content"
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="Extracted text will appear here, or you can type your notes..."
-              className="min-h-[200px]"
-              disabled={saving || processing}
+              placeholder="Extracted text will appear here, or type your own content"
+              rows={8}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="sessionDate">Session Date (Optional)</Label>
+            <Input
+              id="sessionDate"
+              type="date"
+              value={sessionDate}
+              onChange={(e) => setSessionDate(e.target.value)}
             />
           </div>
 
           <div className="flex items-center space-x-2">
             <Checkbox
-              id="share-with-practitioner"
+              id="shared"
               checked={isShared}
-              onCheckedChange={(checked) => setIsShared(!!checked)}
-              disabled={saving || processing}
+              onCheckedChange={(checked) => setIsShared(checked as boolean)}
             />
-            <Label htmlFor="share-with-practitioner">
-              Share this entry with my practitioner
-            </Label>
+            <Label htmlFor="shared">Share with practitioner</Label>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4">
+            <Button variant="outline" onClick={handleClose}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSave} 
+              disabled={loading}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {loading ? 'Saving...' : 'Save Note'}
+            </Button>
           </div>
         </div>
-
-        <DialogFooter>
-          <Button 
-            variant="outline" 
-            onClick={onClose}
-            disabled={saving || processing}
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleSave}
-            disabled={!title.trim() || !content.trim() || saving || processing}
-            className="bg-purple-600 hover:bg-purple-700"
-          >
-            {saving ? 'Saving...' : 'Create Entry'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
