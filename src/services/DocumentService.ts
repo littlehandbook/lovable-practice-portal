@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { DocumentRecord, ServiceError } from '@/models';
+import { isUUID } from '@/lib/utils';
 
 export class DocumentService {
   static async uploadDocument(
@@ -14,17 +15,28 @@ export class DocumentService {
         return { data: null, error: 'User not authenticated' };
       }
 
-      // Get tenant_id from JWT claims instead of user metadata
+      // Get tenant_id from JWT claims
       const { data: { session } } = await supabase.auth.getSession();
-      const tenantId = session?.user?.user_metadata?.tenant_id || user.id; // Fallback to user.id if no tenant_id
+      const tenantId = session?.user?.user_metadata?.tenant_id || user.user_metadata?.tenant_id;
       
-      if (!tenantId) {
-        return { data: null, error: 'Tenant ID not found' };
+      // Validate required UUIDs
+      if (!isUUID(user.id)) {
+        return { data: null, error: 'Invalid user ID format' };
       }
 
-      // Create tenant-isolated file path: tenant_id/user_id/filename
+      if (tenantId && !isUUID(tenantId)) {
+        return { data: null, error: 'Invalid tenant ID format' };
+      }
+
+      if (clientId && !isUUID(clientId)) {
+        return { data: null, error: 'Invalid client ID format' };
+      }
+
+      // Create tenant-isolated file path: tenant_id/user_id/filename (if tenant exists)
       const fileExt = file.name.split('.').pop();
-      const fileName = `${tenantId}/${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const fileName = tenantId 
+        ? `${tenantId}/${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
+        : `${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
       // Upload to storage
       const { data: uploadData, error: uploadError } = await supabase.storage
@@ -37,20 +49,30 @@ export class DocumentService {
       }
 
       // Insert document record with all required fields for RLS
+      const insertData: any = {
+        name: file.name,
+        file_path: uploadData.path,
+        file_size: file.size,
+        mime_type: file.type,
+        document_type: documentType,
+        uploaded_by: user.id, // This MUST match auth.uid() for RLS
+        is_shared_with_client: documentType === 'client_upload'
+      };
+
+      // Only include client_id if it's a valid UUID
+      if (clientId && isUUID(clientId)) {
+        insertData.client_id = clientId;
+      }
+
+      // Only include tenant_id if it's a valid UUID
+      if (tenantId && isUUID(tenantId)) {
+        insertData.tenant_id = tenantId;
+        insertData.therapist_id = user.id;
+      }
+
       const { data: docData, error: docError } = await supabase
         .from('tbl_documents' as any)
-        .insert({
-          name: file.name,
-          file_path: uploadData.path,
-          file_size: file.size,
-          mime_type: file.type,
-          document_type: documentType,
-          client_id: clientId,
-          therapist_id: user.id,
-          tenant_id: tenantId,
-          uploaded_by: user.id, // This MUST match auth.uid() for RLS
-          is_shared_with_client: documentType === 'client_upload'
-        })
+        .insert(insertData)
         .select()
         .single();
 

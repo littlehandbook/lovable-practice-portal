@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { ClientLayout } from '@/components/layouts/ClientLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,6 +12,7 @@ import { UploadProgress } from '@/components/client/UploadProgress';
 import { DocumentsTab } from '@/components/client/DocumentsTab';
 import { ResourcesTab } from '@/components/client/ResourcesTab';
 import { JournalTab } from '@/components/client/JournalTab';
+import { isUUID } from '@/lib/utils';
 
 const ClientDocumentsPage = () => {
   const [activeTab, setActiveTab] = useState('journal');
@@ -63,8 +65,15 @@ const ClientDocumentsPage = () => {
 
   const loadResources = async () => {
     try {
-      // Use a proper UUID format for mock client ID
+      // Use a proper UUID format for mock client ID - this is a valid UUID
       const mockClientId = '550e8400-e29b-41d4-a716-446655440000';
+      
+      // Validate the UUID before making the call
+      if (!isUUID(mockClientId)) {
+        console.error('Mock client ID is not a valid UUID');
+        return;
+      }
+
       const { data, error } = await ClientResourceService.getClientResources(mockClientId);
       if (error) {
         console.error('Failed to load resources:', error);

@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { ClientResource, CreateResourceInput } from '@/models/ClientResource';
+import { isUUID } from '@/lib/utils';
 
 export class ClientResourceService {
   static async createResource(input: CreateResourceInput): Promise<{ data: ClientResource | null; error: string | null }> {
@@ -10,12 +11,21 @@ export class ClientResourceService {
         return { data: null, error: 'User not authenticated' };
       }
 
-      // Get tenant_id from JWT claims instead of user metadata
+      // Get tenant_id from JWT claims
       const { data: { session } } = await supabase.auth.getSession();
-      const tenantId = session?.user?.user_metadata?.tenant_id || user.id; // Fallback to user.id if no tenant_id
+      const tenantId = session?.user?.user_metadata?.tenant_id || user.user_metadata?.tenant_id;
       
-      if (!tenantId) {
-        return { data: null, error: 'Tenant ID not found' };
+      // Validate required UUIDs
+      if (!isUUID(user.id)) {
+        return { data: null, error: 'Invalid user ID format' };
+      }
+
+      if (tenantId && !isUUID(tenantId)) {
+        return { data: null, error: 'Invalid tenant ID format' };
+      }
+
+      if (!isUUID(input.client_id)) {
+        return { data: null, error: 'Invalid client ID format' };
       }
 
       let file_path = null;
@@ -25,8 +35,10 @@ export class ClientResourceService {
       // Handle file upload for document type
       if (input.resource_type === 'document' && input.file) {
         const fileExt = input.file.name.split('.').pop();
-        // Use tenant-isolated file structure: tenant_id/user_id/filename
-        const fileName = `${tenantId}/${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        // Use tenant-isolated file structure: tenant_id/user_id/filename (if tenant exists)
+        const fileName = tenantId 
+          ? `${tenantId}/${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
+          : `${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('documents')
@@ -42,23 +54,29 @@ export class ClientResourceService {
         mime_type = input.file.type;
       }
 
-      // Insert resource record with proper user fields for any potential RLS
+      // Insert resource record with proper user fields for RLS
+      const insertData: any = {
+        client_id: input.client_id,
+        resource_type: input.resource_type,
+        title: input.title,
+        description: input.description,
+        url: input.resource_type === 'url' ? input.url : null,
+        file_path: input.resource_type === 'document' ? file_path : null,
+        file_size: input.resource_type === 'document' ? file_size : null,
+        mime_type: input.resource_type === 'document' ? mime_type : null,
+        is_active: true,
+        created_by: user.id, // Ensure this matches auth.uid()
+        updated_by: user.id  // Ensure this matches auth.uid()
+      };
+
+      // Only include tenant_id if it's a valid UUID
+      if (tenantId && isUUID(tenantId)) {
+        insertData.tenant_id = tenantId;
+      }
+
       const { data, error } = await supabase
         .from('tbl_client_resources' as any)
-        .insert({
-          client_id: input.client_id,
-          tenant_id: tenantId,
-          resource_type: input.resource_type,
-          title: input.title,
-          description: input.description,
-          url: input.resource_type === 'url' ? input.url : null,
-          file_path: input.resource_type === 'document' ? file_path : null,
-          file_size: input.resource_type === 'document' ? file_size : null,
-          mime_type: input.resource_type === 'document' ? mime_type : null,
-          is_active: true,
-          created_by: user.id, // Ensure this matches auth.uid()
-          updated_by: user.id  // Ensure this matches auth.uid()
-        })
+        .insert(insertData)
         .select()
         .single();
 
