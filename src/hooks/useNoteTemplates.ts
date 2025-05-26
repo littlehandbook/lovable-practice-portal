@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 
 // Define the structure of a template
@@ -97,7 +96,9 @@ const createStorageEventSystem = () => {
   return {
     subscribe: (callback: () => void) => {
       listeners.add(callback);
-      return () => listeners.delete(callback);
+      return () => {
+        listeners.delete(callback);
+      };
     },
     notify: () => {
       listeners.forEach(callback => callback());
