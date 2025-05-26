@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,38 +33,29 @@ export function useBranding() {
     try {
       console.log('Fetching branding for tenant:', tenantId);
 
-      // Fetch branding data directly from the table
+      // Use the stored procedure for microservice approach
       const { data: brandingData, error: brandingError } = await supabase
-        .from('tbl_branding')
-        .select('logo_url, primary_color, secondary_color')
-        .eq('tenant_id', tenantId)
-        .single();
+        .rpc('sp_get_branding', { p_tenant_id: tenantId });
 
-      if (brandingError && brandingError.code !== 'PGRST116') {
+      if (brandingError) {
         console.error('Error fetching branding:', brandingError);
         setError('Failed to load branding');
         return;
       }
 
-      // Fetch practice name from configurations
-      const { data: configData, error: configError } = await supabase
-        .from('tbl_configurations')
-        .select('value')
-        .eq('tenant_id', tenantId)
-        .eq('key', 'practice_name')
-        .single();
-
-      if (configError && configError.code !== 'PGRST116') {
-        console.error('Error fetching practice name:', configError);
-      }
-
-      const practiceName = configData?.value ? String(configData.value).replace(/"/g, '') : '';
+      // Handle empty result (no branding found)
+      const result = brandingData?.[0] || {
+        logo_url: '',
+        primary_color: '#0f766e',
+        secondary_color: '#14b8a6',
+        practice_name: ''
+      };
 
       setBranding({
-        logo_url: brandingData?.logo_url || '',
-        primary_color: brandingData?.primary_color || '#0f766e',
-        secondary_color: brandingData?.secondary_color || '#14b8a6',
-        practice_name: practiceName
+        logo_url: result.logo_url || '',
+        primary_color: result.primary_color || '#0f766e',
+        secondary_color: result.secondary_color || '#14b8a6',
+        practice_name: result.practice_name || ''
       });
 
     } catch (err) {
@@ -136,18 +126,15 @@ export function useBranding() {
     try {
       console.log('Saving branding with microservice approach for tenant:', tenantId);
 
-      // Upsert branding data using direct database operations
+      // Use the stored procedure for atomic upsert
       const { error: brandingError } = await supabase
-        .from('tbl_branding')
-        .upsert({
-          tenant_id: tenantId,
-          logo_url: brandingData.logo_url || branding.logo_url,
-          primary_color: brandingData.primary_color || branding.primary_color,
-          secondary_color: brandingData.secondary_color || branding.secondary_color,
-          created_by: user.id,
-          updated_by: user.id
-        }, {
-          onConflict: 'tenant_id'
+        .rpc('sp_upsert_branding', {
+          p_tenant_id: tenantId,
+          p_logo_url: brandingData.logo_url || branding.logo_url,
+          p_primary_color: brandingData.primary_color || branding.primary_color,
+          p_secondary_color: brandingData.secondary_color || branding.secondary_color,
+          p_practice_name: brandingData.practice_name || branding.practice_name,
+          p_user_id: user.id
         });
 
       if (brandingError) {
@@ -159,32 +146,6 @@ export function useBranding() {
           variant: 'destructive'
         });
         return false;
-      }
-
-      // Upsert practice name in configurations if provided
-      if (brandingData.practice_name !== undefined) {
-        const { error: configError } = await supabase
-          .from('tbl_configurations')
-          .upsert({
-            tenant_id: tenantId,
-            key: 'practice_name',
-            value: JSON.stringify(brandingData.practice_name),
-            type: 'dynamic',
-            version: 1,
-            updated_by: user.id
-          }, {
-            onConflict: 'tenant_id,key'
-          });
-
-        if (configError) {
-          console.error('Error saving practice name:', configError);
-          setError(`Failed to save practice name: ${configError.message}`);
-          toast({
-            title: 'Warning',
-            description: `Branding saved but practice name update failed: ${configError.message}`,
-            variant: 'destructive'
-          });
-        }
       }
 
       // Update local state

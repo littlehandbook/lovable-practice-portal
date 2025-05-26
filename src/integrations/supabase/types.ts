@@ -188,7 +188,7 @@ export type Database = {
           {
             foreignKeyName: "fk_branding_tenant"
             columns: ["tenant_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "tbl_tenant_registry"
             referencedColumns: ["tenant_id"]
           },
