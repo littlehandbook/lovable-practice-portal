@@ -21,7 +21,6 @@ import PractitionerDashboard from "./pages/practice/Dashboard";
 import ClientsPage from "./pages/practice/Clients";
 import ClientDetailPage from "./pages/practice/ClientDetail";
 import CalendarPage from "./pages/practice/Calendar";
-import NotesPage from "./pages/practice/Notes";
 import TelehealthPage from "./pages/practice/Telehealth";
 import SettingsPage from "./pages/practice/Settings";
 
@@ -81,14 +80,6 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <CalendarPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route 
-              path="/practice/notes" 
-              element={
-                <ProtectedRoute>
-                  <NotesPage />
                 </ProtectedRoute>
               }
             />

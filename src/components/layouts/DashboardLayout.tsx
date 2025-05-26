@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,7 +5,6 @@ import { useBranding } from '@/hooks/useBranding';
 import { 
   Calendar, 
   Users, 
-  FileText, 
   Settings, 
   BarChart, 
   Video,
@@ -38,11 +36,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       name: 'Calendar', 
       path: '/practice/calendar', 
       icon: <Calendar className="w-5 h-5" /> 
-    },
-    { 
-      name: 'Session Notes', 
-      path: '/practice/notes', 
-      icon: <FileText className="w-5 h-5" /> 
     },
     { 
       name: 'Telehealth', 
