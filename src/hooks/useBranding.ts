@@ -34,33 +34,40 @@ export function useBranding() {
     try {
       console.log('Fetching branding for tenant:', tenantId);
 
-      const { data, error } = await supabase.rpc('sp_get_branding', {
-        p_tenant_id: tenantId // Now properly UUID
-      });
+      // Fetch branding data directly from the table
+      const { data: brandingData, error: brandingError } = await supabase
+        .from('tbl_branding')
+        .select('logo_url, primary_color, secondary_color')
+        .eq('tenant_id', tenantId)
+        .single();
 
-      if (error) {
-        console.error('Error fetching branding:', error);
+      if (brandingError && brandingError.code !== 'PGRST116') {
+        console.error('Error fetching branding:', brandingError);
         setError('Failed to load branding');
         return;
       }
 
-      if (data && data.length > 0) {
-        const brandingData = data[0];
-        setBranding({
-          logo_url: brandingData.logo_url || '',
-          primary_color: brandingData.primary_color || '#0f766e',
-          secondary_color: brandingData.secondary_color || '#14b8a6',
-          practice_name: brandingData.practice_name || ''
-        });
-      } else {
-        // No branding data found, keep defaults
-        setBranding({
-          logo_url: '',
-          primary_color: '#0f766e',
-          secondary_color: '#14b8a6',
-          practice_name: ''
-        });
+      // Fetch practice name from configurations
+      const { data: configData, error: configError } = await supabase
+        .from('tbl_configurations')
+        .select('value')
+        .eq('tenant_id', tenantId)
+        .eq('key', 'practice_name')
+        .single();
+
+      if (configError && configError.code !== 'PGRST116') {
+        console.error('Error fetching practice name:', configError);
       }
+
+      const practiceName = configData?.value ? String(configData.value).replace(/"/g, '') : '';
+
+      setBranding({
+        logo_url: brandingData?.logo_url || '',
+        primary_color: brandingData?.primary_color || '#0f766e',
+        secondary_color: brandingData?.secondary_color || '#14b8a6',
+        practice_name: practiceName
+      });
+
     } catch (err) {
       console.error('Exception fetching branding:', err);
       setError('Failed to load branding');
@@ -127,33 +134,57 @@ export function useBranding() {
     setError(null);
 
     try {
-      console.log('Saving branding with params:', {
-        p_tenant_id: tenantId,
-        p_logo_url: brandingData.logo_url || branding.logo_url,
-        p_primary_color: brandingData.primary_color || branding.primary_color,
-        p_secondary_color: brandingData.secondary_color || branding.secondary_color,
-        p_practice_name: brandingData.practice_name || branding.practice_name,
-        p_user_id: user.id
-      });
+      console.log('Saving branding with microservice approach for tenant:', tenantId);
 
-      const { error } = await supabase.rpc('sp_upsert_branding', {
-        p_tenant_id: tenantId, // Now UUID
-        p_logo_url: brandingData.logo_url || branding.logo_url,
-        p_primary_color: brandingData.primary_color || branding.primary_color,
-        p_secondary_color: brandingData.secondary_color || branding.secondary_color,
-        p_practice_name: brandingData.practice_name || branding.practice_name,
-        p_user_id: user.id
-      });
+      // Upsert branding data using direct database operations
+      const { error: brandingError } = await supabase
+        .from('tbl_branding')
+        .upsert({
+          tenant_id: tenantId,
+          logo_url: brandingData.logo_url || branding.logo_url,
+          primary_color: brandingData.primary_color || branding.primary_color,
+          secondary_color: brandingData.secondary_color || branding.secondary_color,
+          created_by: user.id,
+          updated_by: user.id
+        }, {
+          onConflict: 'tenant_id'
+        });
 
-      if (error) {
-        console.error('Error saving branding:', error);
-        setError(`Failed to save branding: ${error.message}`);
+      if (brandingError) {
+        console.error('Error saving branding:', brandingError);
+        setError(`Failed to save branding: ${brandingError.message}`);
         toast({
           title: 'Error',
-          description: `Failed to save branding: ${error.message}`,
+          description: `Failed to save branding: ${brandingError.message}`,
           variant: 'destructive'
         });
         return false;
+      }
+
+      // Upsert practice name in configurations if provided
+      if (brandingData.practice_name !== undefined) {
+        const { error: configError } = await supabase
+          .from('tbl_configurations')
+          .upsert({
+            tenant_id: tenantId,
+            key: 'practice_name',
+            value: JSON.stringify(brandingData.practice_name),
+            type: 'dynamic',
+            version: 1,
+            updated_by: user.id
+          }, {
+            onConflict: 'tenant_id,key'
+          });
+
+        if (configError) {
+          console.error('Error saving practice name:', configError);
+          setError(`Failed to save practice name: ${configError.message}`);
+          toast({
+            title: 'Warning',
+            description: `Branding saved but practice name update failed: ${configError.message}`,
+            variant: 'destructive'
+          });
+        }
       }
 
       // Update local state
