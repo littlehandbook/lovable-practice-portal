@@ -1,17 +1,13 @@
-
 import React, { useState } from 'react';
 import { DashboardLayout } from '@/components/layouts/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Search, Plus, Check, Save, Lock, AlertTriangle, Clock } from 'lucide-react';
+import { Search, Plus, Check, Lock } from 'lucide-react';
 import { NoteEditor } from '@/components/practice/NoteEditor';
-import { useNoteTemplates } from '@/hooks/useNoteTemplates';
 
 const NotesPage = () => {
-  const { enabledTemplates } = useNoteTemplates();
-  
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNote, setSelectedNote] = useState<number | null>(null);
   const [noteContent, setNoteContent] = useState('');
@@ -219,7 +215,6 @@ const NotesPage = () => {
                 <NoteEditor
                   onSave={handleSaveNote}
                   onCancel={handleCancelEdit}
-                  availableTemplates={enabledTemplates}
                   initialData={selectedNote ? {
                     template: mockNotes.find(n => n.id === selectedNote)?.template || 'free',
                     content: { content: mockNotes.find(n => n.id === selectedNote)?.content || '' },

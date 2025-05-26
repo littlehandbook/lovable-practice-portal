@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -7,40 +7,54 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-
-// Define the structure of a template
-interface Template {
-  id: string;
-  label: string;
-  value: string;
-  fields: { key: string; label: string; description?: string }[];
-  isEnabled: boolean;
-  isCustom: boolean;
-}
+import { useNoteTemplates, type Template } from "@/hooks/useNoteTemplates";
 
 interface NoteEditorProps {
   onSave: (noteData: { template: string; content: Record<string, string>; sessionDate: Date }) => void;
   onCancel: () => void;
   initialData?: { template: string; content: Record<string, string>; sessionDate?: Date };
-  availableTemplates?: Template[];
+  availableTemplates?: Template[]; // This prop is now optional since we use the hook
 }
 
-export function NoteEditor({ onSave, onCancel, initialData, availableTemplates = [] }: NoteEditorProps) {
-  // Filter to only show enabled templates
-  const enabledTemplates = availableTemplates.filter(template => template.isEnabled);
+export function NoteEditor({ onSave, onCancel, initialData }: NoteEditorProps) {
+  const { enabledTemplates, loading, error, refreshTemplates } = useNoteTemplates();
   
-  const [template, setTemplate] = useState<string>(initialData?.template || (enabledTemplates[0]?.value || "free"));
-  const [fields, setFields] = useState<Record<string, string>>(initialData?.content || { content: "" });
-  const [sessionDate, setSessionDate] = useState<Date>(initialData?.sessionDate || new Date());
-  const [error, setError] = useState<string | null>(null);
+  const [template, setTemplate] = useState<string>('');
+  const [fields, setFields] = useState<Record<string, string>>({});
+  const [sessionDate, setSessionDate] = useState<Date>(new Date());
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  // Initialize form when templates load or initial data changes
+  useEffect(() => {
+    if (loading) return;
+
+    if (initialData) {
+      setTemplate(initialData.template || '');
+      setFields(initialData.content || {});
+      setSessionDate(initialData.sessionDate || new Date());
+    } else {
+      // Set default template to first enabled template
+      const defaultTemplate = enabledTemplates[0]?.value || '';
+      setTemplate(defaultTemplate);
+      
+      if (defaultTemplate) {
+        const tmpl = enabledTemplates.find((t) => t.value === defaultTemplate);
+        if (tmpl) {
+          const init: Record<string, string> = {};
+          tmpl.fields.forEach((f) => (init[f.key] = ""));
+          setFields(init);
+        }
+      }
+    }
+  }, [enabledTemplates, initialData, loading]);
 
   // Initialize fields when template changes
   const handleTemplateChange = (value: string) => {
     setTemplate(value);
-    setError(null);
+    setValidationError(null);
     const tmpl = enabledTemplates.find((t) => t.value === value);
     if (tmpl) {
       const init: Record<string, string> = {};
@@ -54,10 +68,18 @@ export function NoteEditor({ onSave, onCancel, initialData, availableTemplates =
   };
 
   const handleSave = () => {
+    setValidationError(null);
+
+    // Validate template selection
+    if (!template) {
+      setValidationError("Please select a template.");
+      return;
+    }
+
     // Validate required fields
     const hasEmptyFields = Object.values(fields).some(value => !value.trim());
     if (hasEmptyFields) {
-      setError("Please fill out all fields before saving.");
+      setValidationError("Please fill out all fields before saving.");
       return;
     }
     
@@ -67,6 +89,63 @@ export function NoteEditor({ onSave, onCancel, initialData, availableTemplates =
   // Get current template fields
   const currentTemplate = enabledTemplates.find((t) => t.value === template);
   const fieldDefs = currentTemplate?.fields || [];
+
+  // Loading state
+  if (loading) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Session Notes</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+            <span className="ml-2 text-gray-600">Loading templates...</span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Session Notes</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-center py-8 text-red-600">
+            <AlertCircle className="h-5 w-5 mr-2" />
+            <span>Error loading templates: {error}</span>
+            <Button variant="outline" className="ml-4" onClick={refreshTemplates}>
+              Retry
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // No enabled templates
+  if (enabledTemplates.length === 0) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Session Notes</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-center py-8 text-gray-600">
+            <AlertCircle className="h-5 w-5 mr-2" />
+            <div className="text-center">
+              <p>No templates are currently enabled.</p>
+              <p className="text-sm mt-1">Please enable at least one template in Settings.</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="w-full">
@@ -141,9 +220,9 @@ export function NoteEditor({ onSave, onCancel, initialData, availableTemplates =
           ))}
         </div>
 
-        {error && (
+        {validationError && (
           <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-3">
-            {error}
+            {validationError}
           </div>
         )}
 

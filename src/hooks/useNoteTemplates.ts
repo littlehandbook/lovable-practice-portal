@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 // Define the structure of a template
 interface Template {
@@ -87,35 +87,118 @@ const defaultTemplates: Template[] = [
   },
 ];
 
-export const useNoteTemplates = () => {
-  const [templates, setTemplates] = useState<Template[]>(defaultTemplates);
+const STORAGE_KEY = 'noteTemplates';
+const STORAGE_LISTENERS_KEY = 'templateStorageListeners';
 
-  // In a real implementation, this would fetch from settings/database
-  useEffect(() => {
-    // TODO: Replace with actual API call to fetch templates from settings
-    // For now, we'll use localStorage to simulate persistent settings
-    const savedTemplates = localStorage.getItem('noteTemplates');
-    if (savedTemplates) {
-      try {
+// Create a simple event system for cross-component communication
+const createStorageEventSystem = () => {
+  const listeners = new Set<() => void>();
+  
+  return {
+    subscribe: (callback: () => void) => {
+      listeners.add(callback);
+      return () => listeners.delete(callback);
+    },
+    notify: () => {
+      listeners.forEach(callback => callback());
+    }
+  };
+};
+
+// Global event system for template changes
+const templateStorageEvents = createStorageEventSystem();
+
+export const useNoteTemplates = () => {
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load templates from localStorage
+  const loadTemplates = useCallback(() => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const savedTemplates = localStorage.getItem(STORAGE_KEY);
+      if (savedTemplates) {
         const parsed = JSON.parse(savedTemplates);
-        setTemplates(parsed);
-      } catch (error) {
-        console.error('Error parsing saved templates:', error);
+        // Validate the parsed data structure
+        if (Array.isArray(parsed) && parsed.every(t => t.id && t.label && t.fields)) {
+          setTemplates(parsed);
+        } else {
+          throw new Error('Invalid template data structure');
+        }
+      } else {
+        // Initialize with default templates
         setTemplates(defaultTemplates);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultTemplates));
       }
+    } catch (error) {
+      console.error('Error loading templates:', error);
+      setError('Failed to load templates');
+      setTemplates(defaultTemplates);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
+  // Save templates to localStorage and notify other components
+  const updateTemplates = useCallback((newTemplates: Template[]) => {
+    try {
+      setTemplates(newTemplates);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(newTemplates));
+      // Notify other components that templates have changed
+      templateStorageEvents.notify();
+      setError(null);
+    } catch (error) {
+      console.error('Error saving templates:', error);
+      setError('Failed to save templates');
+    }
+  }, []);
+
+  // Load templates on mount
+  useEffect(() => {
+    loadTemplates();
+  }, [loadTemplates]);
+
+  // Listen for changes from other components (like settings)
+  useEffect(() => {
+    const unsubscribe = templateStorageEvents.subscribe(() => {
+      loadTemplates();
+    });
+    return unsubscribe;
+  }, [loadTemplates]);
+
+  // Get only enabled templates
   const enabledTemplates = templates.filter(template => template.isEnabled);
 
-  const updateTemplates = (newTemplates: Template[]) => {
-    setTemplates(newTemplates);
-    localStorage.setItem('noteTemplates', JSON.stringify(newTemplates));
-  };
+  // Get template by ID
+  const getTemplateById = useCallback((id: string) => {
+    return templates.find(template => template.id === id);
+  }, [templates]);
+
+  // Get enabled template by value
+  const getEnabledTemplateByValue = useCallback((value: string) => {
+    return enabledTemplates.find(template => template.value === value);
+  }, [enabledTemplates]);
 
   return {
     templates,
     enabledTemplates,
-    updateTemplates
+    loading,
+    error,
+    updateTemplates,
+    getTemplateById,
+    getEnabledTemplateByValue,
+    refreshTemplates: loadTemplates
   };
 };
+
+// Export the event system for use in settings
+export const notifyTemplateChange = () => {
+  templateStorageEvents.notify();
+};
+
+// Export default templates for reference
+export { defaultTemplates };
+export type { Template };

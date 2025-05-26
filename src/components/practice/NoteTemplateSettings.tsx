@@ -1,107 +1,16 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
 import { Plus, Trash2, Edit3, Save, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
-// Define template structure
-interface TemplateField {
-  key: string;
-  label: string;
-  description?: string;
-}
-
-interface Template {
-  id: string;
-  label: string;
-  value: string;
-  fields: TemplateField[];
-  isEnabled: boolean;
-  isCustom: boolean;
-}
-
-// Predefined templates with descriptions
-const defaultTemplates: Template[] = [
-  {
-    id: 'free',
-    label: 'Free Field',
-    value: 'free',
-    fields: [{ key: 'content', label: 'Session Notes' }],
-    isEnabled: true,
-    isCustom: false,
-  },
-  {
-    id: 'soap',
-    label: 'SOAP Notes',
-    value: 'soap',
-    fields: [
-      { key: 'subjective', label: 'Subjective', description: 'Client\'s perspective, feelings, and reported experiences' },
-      { key: 'objective', label: 'Objective', description: 'Observable behaviors, appearance, and factual data' },
-      { key: 'assessment', label: 'Assessment', description: 'Clinical interpretation and progress analysis' },
-      { key: 'plan', label: 'Plan', description: 'Future treatment course and next steps' },
-    ],
-    isEnabled: true,
-    isCustom: false,
-  },
-  {
-    id: 'birp',
-    label: 'BIRP Notes',
-    value: 'birp',
-    fields: [
-      { key: 'behavior', label: 'Behavior', description: 'Observable and reported behaviors' },
-      { key: 'intervention', label: 'Intervention', description: 'Therapeutic interventions used' },
-      { key: 'response', label: 'Response', description: 'Client\'s response to interventions' },
-      { key: 'plan', label: 'Plan', description: 'Future session plans and strategies' },
-    ],
-    isEnabled: true,
-    isCustom: false,
-  },
-  {
-    id: 'dap',
-    label: 'DAP Notes',
-    value: 'dap',
-    fields: [
-      { key: 'data', label: 'Data', description: 'Combined subjective and objective information' },
-      { key: 'assessment', label: 'Assessment', description: 'Clinical assessment of the data' },
-      { key: 'plan', label: 'Plan', description: 'Future treatment plan' },
-    ],
-    isEnabled: true,
-    isCustom: false,
-  },
-  {
-    id: 'pirp',
-    label: 'PIRP Notes',
-    value: 'pirp',
-    fields: [
-      { key: 'problem', label: 'Problem', description: 'Specific problems addressed in session' },
-      { key: 'intervention', label: 'Intervention', description: 'Interventions used for problems' },
-      { key: 'response', label: 'Response', description: 'Client\'s response to interventions' },
-      { key: 'plan', label: 'Plan', description: 'Future plan for addressing problems' },
-    ],
-    isEnabled: true,
-    isCustom: false,
-  },
-  {
-    id: 'girp',
-    label: 'GIRP Notes',
-    value: 'girp',
-    fields: [
-      { key: 'goal', label: 'Goal', description: 'Client\'s treatment goals addressed' },
-      { key: 'intervention', label: 'Intervention', description: 'Interventions aimed at goals' },
-      { key: 'response', label: 'Response', description: 'Client\'s response in relation to goals' },
-      { key: 'plan', label: 'Plan', description: 'Continued work on goals' },
-    ],
-    isEnabled: true,
-    isCustom: false,
-  },
-];
+import { useNoteTemplates, notifyTemplateChange, type Template } from '@/hooks/useNoteTemplates';
 
 export function NoteTemplateSettings() {
-  const [templates, setTemplates] = useState<Template[]>(defaultTemplates);
+  const { templates, updateTemplates, loading, error } = useNoteTemplates();
   const [editingTemplate, setEditingTemplate] = useState<string | null>(null);
   const [newTemplate, setNewTemplate] = useState<Partial<Template>>({
     label: '',
@@ -112,20 +21,29 @@ export function NoteTemplateSettings() {
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
+  // Reset unsaved changes when templates load
+  useEffect(() => {
+    setHasUnsavedChanges(false);
+  }, [templates]);
+
   const toggleTemplate = (templateId: string) => {
-    setTemplates(prev => 
-      prev.map(template => 
-        template.id === templateId 
-          ? { ...template, isEnabled: !template.isEnabled }
-          : template
-      )
+    const updatedTemplates = templates.map(template => 
+      template.id === templateId 
+        ? { ...template, isEnabled: !template.isEnabled }
+        : template
     );
+    updateTemplates(updatedTemplates);
     setHasUnsavedChanges(true);
   };
 
   const deleteCustomTemplate = (templateId: string) => {
-    setTemplates(prev => prev.filter(template => template.id !== templateId));
+    const updatedTemplates = templates.filter(template => template.id !== templateId);
+    updateTemplates(updatedTemplates);
     setHasUnsavedChanges(true);
+    toast({
+      title: 'Template Deleted',
+      description: 'Custom template has been removed.'
+    });
   };
 
   const addFieldToNewTemplate = () => {
@@ -156,7 +74,14 @@ export function NoteTemplateSettings() {
   };
 
   const saveNewTemplate = () => {
-    if (!newTemplate.label || !newTemplate.fields?.length) return;
+    if (!newTemplate.label || !newTemplate.fields?.length) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please provide a template name and at least one field.',
+        variant: 'destructive'
+      });
+      return;
+    }
 
     const template: Template = {
       id: `custom_${Date.now()}`,
@@ -167,17 +92,27 @@ export function NoteTemplateSettings() {
       isCustom: true,
     };
 
-    setTemplates(prev => [...prev, template]);
+    const updatedTemplates = [...templates, template];
+    updateTemplates(updatedTemplates);
     setNewTemplate({ label: '', fields: [{ key: 'field1', label: 'Field 1' }] });
     setShowCreateForm(false);
     setHasUnsavedChanges(true);
+    
+    toast({
+      title: 'Template Created',
+      description: `"${template.label}" template has been added.`
+    });
   };
 
   const saveAllTemplates = async () => {
     setSaving(true);
     try {
-      // Simulate API call to save template settings
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // The templates are already saved via updateTemplates, but we simulate
+      // an API call here for consistency with the UI feedback
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Notify other components that templates have been saved
+      notifyTemplateChange();
       
       setHasUnsavedChanges(false);
       toast({
@@ -194,6 +129,41 @@ export function NoteTemplateSettings() {
       setSaving(false);
     }
   };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Note Templates</CardTitle>
+          <CardDescription>Loading templates...</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Note Templates</CardTitle>
+          <CardDescription>Error loading templates</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <p className="text-red-600">{error}</p>
+            <Button className="mt-4" onClick={() => window.location.reload()}>
+              Retry
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
