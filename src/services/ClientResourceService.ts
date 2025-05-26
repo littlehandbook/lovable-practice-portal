@@ -42,7 +42,7 @@ export class ClientResourceService {
         mime_type = input.file.type;
       }
 
-      // Insert resource record
+      // Insert resource record with proper user fields for any potential RLS
       const { data, error } = await supabase
         .from('tbl_client_resources' as any)
         .insert({
@@ -56,8 +56,8 @@ export class ClientResourceService {
           file_size: input.resource_type === 'document' ? file_size : null,
           mime_type: input.resource_type === 'document' ? mime_type : null,
           is_active: true,
-          created_by: user.id,
-          updated_by: user.id
+          created_by: user.id, // Ensure this matches auth.uid()
+          updated_by: user.id  // Ensure this matches auth.uid()
         })
         .select()
         .single();

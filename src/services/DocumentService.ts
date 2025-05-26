@@ -36,7 +36,7 @@ export class DocumentService {
         return { data: null, error: uploadError.message };
       }
 
-      // Insert document record
+      // Insert document record with all required fields for RLS
       const { data: docData, error: docError } = await supabase
         .from('tbl_documents' as any)
         .insert({
@@ -48,7 +48,7 @@ export class DocumentService {
           client_id: clientId,
           therapist_id: user.id,
           tenant_id: tenantId,
-          uploaded_by: user.id,
+          uploaded_by: user.id, // This MUST match auth.uid() for RLS
           is_shared_with_client: documentType === 'client_upload'
         })
         .select()
