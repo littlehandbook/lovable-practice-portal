@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Calendar, FileText, Plus, Save, Bot, BookOpen, AlertTriangle } from 'lucide-react';
 import { NoteEditor } from './NoteEditor';
+import { useNoteTemplates } from '@/hooks/useNoteTemplates';
 
 // Mock data for existing session notes
 const mockSessionNotes = [
@@ -102,6 +103,9 @@ export const SessionNotesTab: React.FC<SessionNotesTabProps> = ({ clientId }) =>
   const [homework, setHomework] = useState('');
   const [practitionerRiskRating, setPractitionerRiskRating] = useState('');
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  
+  // Get live templates from settings
+  const { enabledTemplates } = useNoteTemplates();
 
   // Sort notes by date (most recent first)
   const sortedNotes = [...mockSessionNotes].sort((a, b) => 
@@ -256,7 +260,7 @@ export const SessionNotesTab: React.FC<SessionNotesTabProps> = ({ clientId }) =>
             <NoteEditor
               onSave={handleSaveNote}
               onCancel={() => setShowEditor(false)}
-              availableTemplates={defaultTemplates}
+              availableTemplates={enabledTemplates}
               initialData={selectedNote ? {
                 template: selectedNote.template,
                 content: selectedNote.content
