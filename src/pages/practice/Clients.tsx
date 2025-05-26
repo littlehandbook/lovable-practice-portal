@@ -163,12 +163,11 @@ const ClientsPage = () => {
                   <Link to={`/practice/clients/${client.id}`}>
                     <Button 
                       size="sm" 
-                      className="w-full"
+                      className="w-full hover:opacity-90"
                       style={{ 
                         backgroundColor: primaryColor,
                         color: 'white'
                       }}
-                      className="hover:opacity-90"
                     >
                       View Details
                     </Button>
@@ -207,6 +206,10 @@ const ClientsPage = () => {
         <AddClientDialog 
           open={showAddDialog} 
           onOpenChange={setShowAddDialog}
+          onClientAdded={() => {
+            // Refresh the client list when a new client is added
+            // This could trigger a re-fetch in a real implementation
+          }}
         />
       </div>
     </DashboardLayout>

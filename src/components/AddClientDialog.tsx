@@ -1,15 +1,16 @@
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Plus } from 'lucide-react';
 import { ClientService } from '@/services/ClientService';
 
 interface AddClientDialogProps {
-  onClientAdded: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onClientAdded?: () => void;
 }
 
 interface ClientFormData {
@@ -18,8 +19,7 @@ interface ClientFormData {
   phone: string;
 }
 
-export function AddClientDialog({ onClientAdded }: AddClientDialogProps) {
-  const [open, setOpen] = useState(false);
+export function AddClientDialog({ open, onOpenChange, onClientAdded }: AddClientDialogProps) {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   
@@ -71,8 +71,8 @@ export function AddClientDialog({ onClientAdded }: AddClientDialogProps) {
       
       // Reset form
       setFormData({ name: '', email: '', phone: '' });
-      setOpen(false);
-      onClientAdded();
+      onOpenChange(false);
+      onClientAdded?.();
       
     } catch (error) {
       console.error('Unexpected error creating client:', error);
@@ -87,13 +87,7 @@ export function AddClientDialog({ onClientAdded }: AddClientDialogProps) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button className="bg-teal-600 hover:bg-teal-700">
-          <Plus className="h-4 w-4 mr-2" />
-          Add New Client
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Add New Client</DialogTitle>
@@ -138,7 +132,7 @@ export function AddClientDialog({ onClientAdded }: AddClientDialogProps) {
             <Button
               type="button"
               variant="outline"
-              onClick={() => setOpen(false)}
+              onClick={() => onOpenChange(false)}
               disabled={loading}
             >
               Cancel
