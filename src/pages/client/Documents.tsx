@@ -108,9 +108,9 @@ const ClientDocumentsPage = () => {
     handleUpload(fileList.files);
   };
 
-  const handleDownload = async (document: DocumentRecord) => {
+  const handleDownload = async (documentRecord: DocumentRecord) => {
     try {
-      const { data, error } = await DocumentService.downloadDocument(document.file_path);
+      const { data, error } = await DocumentService.downloadDocument(documentRecord.file_path);
       
       if (error || !data) {
         toast({
@@ -121,11 +121,11 @@ const ClientDocumentsPage = () => {
         return;
       }
 
-      // Create download link
+      // Create download link using global document object
       const url = window.URL.createObjectURL(data);
-      const link = document.createElement('a');
+      const link = window.document.createElement('a');
       link.href = url;
-      link.download = document.name;
+      link.download = documentRecord.name;
       link.click();
       window.URL.revokeObjectURL(url);
     } catch (error) {
