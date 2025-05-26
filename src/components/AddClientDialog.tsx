@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Plus } from 'lucide-react';
+import { ClientService } from '@/services/ClientService';
 
 interface AddClientDialogProps {
   onClientAdded: () => void;
@@ -35,10 +36,10 @@ export function AddClientDialog({ onClientAdded }: AddClientDialogProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name.trim() || !formData.email.trim()) {
+    if (!formData.name.trim()) {
       toast({
         title: 'Validation Error',
-        description: 'Name and email are required fields',
+        description: 'Name is required',
         variant: 'destructive'
       });
       return;
@@ -47,10 +48,22 @@ export function AddClientDialog({ onClientAdded }: AddClientDialogProps) {
     setLoading(true);
     
     try {
-      // For now, we'll simulate adding a client since there's no backend implementation yet
-      // This would normally be a call to supabase or another API
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+      const { data, error } = await ClientService.createClient({
+        name: formData.name.trim(),
+        email: formData.email.trim() || undefined,
+        phone: formData.phone.trim() || undefined
+      });
       
+      if (error) {
+        console.error('Error creating client:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to add client',
+          variant: 'destructive'
+        });
+        return;
+      }
+
       toast({
         title: 'Success',
         description: 'Client added successfully'
@@ -62,6 +75,7 @@ export function AddClientDialog({ onClientAdded }: AddClientDialogProps) {
       onClientAdded();
       
     } catch (error) {
+      console.error('Unexpected error creating client:', error);
       toast({
         title: 'Error',
         description: 'Failed to add client',
@@ -97,7 +111,7 @@ export function AddClientDialog({ onClientAdded }: AddClientDialogProps) {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="email">Email *</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
