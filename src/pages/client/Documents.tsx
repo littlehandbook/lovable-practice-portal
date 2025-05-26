@@ -51,6 +51,13 @@ const ClientDocumentsPage = () => {
     fetchDocuments();
   }, [toast]);
 
+  const formatFileSize = (bytes?: number) => {
+    if (!bytes) return 'Unknown';
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
   const handleUpload = async (files: FileList) => {
     try {
       const uploadPromises = Array.from(files).map(file => 
@@ -89,9 +96,38 @@ const ClientDocumentsPage = () => {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleUpload(e.target.files);
+    }
+  };
+
+  const handleFileSelect = (file: File) => {
+    const fileList = new DataTransfer();
+    fileList.items.add(file);
+    handleUpload(fileList.files);
+  };
+
   const handleDownload = async (document: DocumentRecord) => {
     try {
-      await DocumentService.downloadDocument(document);
+      const { data, error } = await DocumentService.downloadDocument(document.file_path);
+      
+      if (error || !data) {
+        toast({
+          title: 'Error',
+          description: 'Failed to download file',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Create download link
+      const url = window.URL.createObjectURL(data);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = document.name;
+      link.click();
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Download error:', error);
       toast({
@@ -120,9 +156,11 @@ const ClientDocumentsPage = () => {
           <TabsContent value="documents">
             <DocumentsTab 
               documents={documents}
-              onUpload={handleUpload}
+              formatFileSize={formatFileSize}
               onDownload={handleDownload}
-              loading={loading}
+              onFileChange={handleFileChange}
+              onFileSelect={handleFileSelect}
+              uploading={false}
             />
           </TabsContent>
 

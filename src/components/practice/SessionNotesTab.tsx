@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -212,7 +211,7 @@ export const SessionNotesTab: React.FC<SessionNotesTabProps> = ({ clientId }) =>
                     </Badge>
                   </div>
                   <div className="text-xs text-gray-600 line-clamp-2">
-                    {Object.values(note.content)[0]}
+                    {Object.values(note.content)[0] as string}
                   </div>
                   <div className="flex items-center mt-2 space-x-2">
                     <Badge className={`text-xs ${getRiskRatingColor(note.freudRiskRating)}`}>
@@ -272,7 +271,7 @@ export const SessionNotesTab: React.FC<SessionNotesTabProps> = ({ clientId }) =>
                   {Object.entries(selectedNote.content).map(([key, value]) => (
                     <div key={key} className="mb-3 last:mb-0">
                       <Label className="text-sm font-medium capitalize">{key}:</Label>
-                      <p className="text-sm text-gray-700 mt-1">{value}</p>
+                      <p className="text-sm text-gray-700 mt-1">{value as string}</p>
                     </div>
                   ))}
                 </div>
