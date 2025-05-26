@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ClientLayout } from '@/components/layouts/ClientLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -92,24 +91,27 @@ const ClientDocumentsPage = () => {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
-      
-      // Validate file size (10MB limit)
-      if (file.size > 10 * 1024 * 1024) {
-        toast({
-          title: "File too large",
-          description: "Maximum file size is 10MB",
-          variant: "destructive"
-        });
-        return;
-      }
-
       await uploadDocument(file);
       // Reset the file input
       e.target.value = '';
     }
   };
 
+  const handleFileSelect = async (file: File) => {
+    await uploadDocument(file);
+  };
+
   const uploadDocument = async (file: File) => {
+    // Validate file size (10MB limit)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Maximum file size is 10MB",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setUploading(true);
     setUploadProgress(0);
     
@@ -319,7 +321,9 @@ const ClientDocumentsPage = () => {
               documents={documents} 
               formatFileSize={formatFileSize} 
               onDownload={handleDownload} 
-              onFileChange={handleFileChange} 
+              onFileChange={handleFileChange}
+              onFileSelect={handleFileSelect}
+              uploading={uploading}
             />
           </TabsContent>
           

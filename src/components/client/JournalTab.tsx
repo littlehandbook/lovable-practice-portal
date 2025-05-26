@@ -1,10 +1,10 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, BookOpen, Calendar, Share2, Edit, Trash2 } from 'lucide-react';
+import { Plus, BookOpen, Calendar, Share2, Edit, Trash2, FileText } from 'lucide-react';
 import { ClientJournalEntry } from '@/services/ClientJournalService';
 import { JournalEntryDialog } from './JournalEntryDialog';
+import { OCRNoteDialog } from './OCRNoteDialog';
 
 interface JournalTabProps {
   journalEntries: ClientJournalEntry[];
@@ -22,11 +22,17 @@ export const JournalTab: React.FC<JournalTabProps> = ({
   loading = false 
 }) => {
   const [showDialog, setShowDialog] = useState(false);
+  const [showOCRDialog, setShowOCRDialog] = useState(false);
   const [editingEntry, setEditingEntry] = useState<ClientJournalEntry | null>(null);
 
   const handleCreate = async (data: { title: string; content: string; session_date?: string; is_shared_with_practitioner?: boolean }) => {
     await onCreateEntry(data);
     setShowDialog(false);
+  };
+
+  const handleOCRCreate = async (data: { title: string; content: string; session_date?: string; is_shared_with_practitioner?: boolean }) => {
+    await onCreateEntry(data);
+    setShowOCRDialog(false);
   };
 
   const handleEdit = async (data: { title: string; content: string; session_date?: string; is_shared_with_practitioner?: boolean }) => {
@@ -55,14 +61,24 @@ export const JournalTab: React.FC<JournalTabProps> = ({
               <BookOpen className="h-5 w-5 mr-2" />
               My Journal
             </CardTitle>
-            <Button 
-              onClick={() => setShowDialog(true)}
-              className="bg-purple-600 hover:bg-purple-700"
-              disabled={loading}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Entry
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                onClick={() => setShowOCRDialog(true)}
+                variant="outline"
+                disabled={loading}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                OCR Note
+              </Button>
+              <Button 
+                onClick={() => setShowDialog(true)}
+                className="bg-purple-600 hover:bg-purple-700"
+                disabled={loading}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New Entry
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -70,7 +86,7 @@ export const JournalTab: React.FC<JournalTabProps> = ({
             <div className="text-center py-8 text-gray-500">
               <BookOpen className="h-12 w-12 mx-auto text-gray-300 mb-4" />
               <p>No journal entries yet.</p>
-              <p className="text-sm mt-1">Start writing about your thoughts and experiences.</p>
+              <p className="text-sm mt-1">Start writing about your thoughts and experiences, or create notes from images using OCR.</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -137,6 +153,12 @@ export const JournalTab: React.FC<JournalTabProps> = ({
         onSave={editingEntry ? handleEdit : handleCreate}
         entry={editingEntry}
         loading={loading}
+      />
+
+      <OCRNoteDialog
+        open={showOCRDialog}
+        onClose={() => setShowOCRDialog(false)}
+        onSave={handleOCRCreate}
       />
     </>
   );

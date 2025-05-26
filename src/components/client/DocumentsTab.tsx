@@ -4,26 +4,36 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DocumentRecord } from '@/models';
 import { DocumentsTable } from './DocumentsTable';
 import { EmptyDocumentsState } from './EmptyDocumentsState';
-import { DragDropUpload } from './DragDropUpload';
+import { CameraUpload } from './CameraUpload';
 
 interface DocumentsTabProps {
   documents: DocumentRecord[];
   formatFileSize: (bytes?: number) => string;
   onDownload: (document: DocumentRecord) => void;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onFileSelect: (file: File) => void;
+  uploading?: boolean;
 }
 
 export const DocumentsTab: React.FC<DocumentsTabProps> = ({ 
   documents, 
   formatFileSize, 
   onDownload, 
-  onFileChange 
+  onFileChange,
+  onFileSelect,
+  uploading = false
 }) => {
   return (
     <>
       <Card>
         <CardHeader>
-          <CardTitle>My Uploaded Documents</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>My Uploaded Documents</CardTitle>
+            <CameraUpload 
+              onFileSelect={onFileSelect}
+              uploading={uploading}
+            />
+          </div>
         </CardHeader>
         <CardContent>
           {documents.length > 0 ? (
@@ -37,10 +47,6 @@ export const DocumentsTab: React.FC<DocumentsTabProps> = ({
           )}
         </CardContent>
       </Card>
-      
-      <div className="mt-6">
-        <DragDropUpload onFileChange={onFileChange} />
-      </div>
     </>
   );
 };
