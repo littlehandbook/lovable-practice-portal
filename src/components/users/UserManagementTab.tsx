@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 
 interface UserManagementTabProps {
   userService: UserService;
-  tenantId: string;
+  tenantId: string; // Now UUID string
   userId: string;
   roles: UserRole[];
   onUserAdded: () => void;
@@ -36,7 +36,7 @@ export function UserManagementTab({ userService, tenantId, userId, roles, onUser
         newUserFirstName,
         newUserLastName,
         newUserRole,
-        tenantId,
+        tenantId, // UUID string
         userId
       );
 

@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 
 interface Tenant {
-  tenant_id: string;
+  tenant_id: string; // This will now be a UUID string
   practice_name: string;
   status: string;
   created_at: string;
@@ -30,7 +30,7 @@ export const TenantManagement = ({ tenant, onStatusUpdated }: TenantManagementPr
       const { error } = await supabase.rpc(
         'sp_update_tenant_status' as any,
         { 
-          p_tenant_id: tenant.tenant_id,
+          p_tenant_id: tenant.tenant_id, // Now UUID format
           p_new_status: newStatus
         }
       );
@@ -79,7 +79,7 @@ export const TenantManagement = ({ tenant, onStatusUpdated }: TenantManagementPr
         </div>
         <div>
           <h4 className="text-sm font-medium">Database Schema</h4>
-          <p className="text-sm text-gray-500">tenant_{tenant.tenant_id}</p>
+          <p className="text-sm text-gray-500">tenant_{tenant.tenant_id.replace(/-/g, '_')}</p>
         </div>
         <div>
           <h4 className="text-sm font-medium">Operations</h4>

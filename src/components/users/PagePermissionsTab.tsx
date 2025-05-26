@@ -38,7 +38,7 @@ const PAGE_COMPONENTS = {
 
 interface PagePermissionsTabProps {
   userService: UserService;
-  tenantId: string;
+  tenantId: string; // Now UUID string
   userId: string;
   roles: UserRole[];
   pagePermissions: PagePermission[];
@@ -66,7 +66,7 @@ export function PagePermissionsTab({
       if (!permission) return;
 
       const newRoles = await userService.updatePermissions(
-        tenantId,
+        tenantId, // UUID string
         pageId,
         role,
         permission.roles,

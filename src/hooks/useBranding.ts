@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,6 +24,7 @@ export function useBranding() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Convert user ID to UUID format for tenant_id (user ID is already a UUID)
   const tenantId = user?.id || '00000000-0000-0000-0000-000000000000';
 
   const fetchBranding = useCallback(async () => {
@@ -33,7 +35,7 @@ export function useBranding() {
       console.log('Fetching branding for tenant:', tenantId);
 
       const { data, error } = await supabase.rpc('sp_get_branding', {
-        p_tenant_id: tenantId
+        p_tenant_id: tenantId // Now properly UUID
       });
 
       if (error) {
@@ -135,7 +137,7 @@ export function useBranding() {
       });
 
       const { error } = await supabase.rpc('sp_upsert_branding', {
-        p_tenant_id: tenantId,
+        p_tenant_id: tenantId, // Now UUID
         p_logo_url: brandingData.logo_url || branding.logo_url,
         p_primary_color: brandingData.primary_color || branding.primary_color,
         p_secondary_color: brandingData.secondary_color || branding.secondary_color,

@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 
 interface RoleManagementTabProps {
   userService: UserService;
-  tenantId: string;
+  tenantId: string; // Now UUID string
   userId: string;
   roles: UserRole[];
   rolesLoading: boolean;

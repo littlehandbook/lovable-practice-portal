@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { TenantManagement } from "./TenantManagement";
 
 interface Tenant {
-  tenant_id: string;
+  tenant_id: string; // Now UUID string
   practice_name: string;
   status: string;
   created_at: string;
