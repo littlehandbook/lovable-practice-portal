@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Trash2, Edit3, Save, X } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 // Define template structure
 interface TemplateField {
@@ -108,6 +108,9 @@ export function NoteTemplateSettings() {
     fields: [{ key: 'field1', label: 'Field 1' }],
   });
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const { toast } = useToast();
 
   const toggleTemplate = (templateId: string) => {
     setTemplates(prev => 
@@ -117,10 +120,12 @@ export function NoteTemplateSettings() {
           : template
       )
     );
+    setHasUnsavedChanges(true);
   };
 
   const deleteCustomTemplate = (templateId: string) => {
     setTemplates(prev => prev.filter(template => template.id !== templateId));
+    setHasUnsavedChanges(true);
   };
 
   const addFieldToNewTemplate = () => {
@@ -165,6 +170,29 @@ export function NoteTemplateSettings() {
     setTemplates(prev => [...prev, template]);
     setNewTemplate({ label: '', fields: [{ key: 'field1', label: 'Field 1' }] });
     setShowCreateForm(false);
+    setHasUnsavedChanges(true);
+  };
+
+  const saveAllTemplates = async () => {
+    setSaving(true);
+    try {
+      // Simulate API call to save template settings
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setHasUnsavedChanges(false);
+      toast({
+        title: 'Success',
+        description: 'Template settings saved successfully'
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to save template settings',
+        variant: 'destructive'
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -309,6 +337,30 @@ export function NoteTemplateSettings() {
               </div>
             </div>
           )}
+
+          {/* Main Save Button */}
+          <div className="flex items-center justify-between pt-4 border-t">
+            <div className="flex items-center space-x-2">
+              {saving && (
+                <>
+                  <Save className="h-4 w-4 animate-spin" />
+                  <span className="text-sm text-blue-600">Saving...</span>
+                </>
+              )}
+              {hasUnsavedChanges && !saving && (
+                <span className="text-sm text-orange-600">You have unsaved changes</span>
+              )}
+            </div>
+            
+            <Button
+              onClick={saveAllTemplates}
+              disabled={!hasUnsavedChanges || saving}
+              className="bg-teal-600 hover:bg-teal-700"
+            >
+              <Save className="h-4 w-4 mr-2" />
+              Save Template Settings
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
