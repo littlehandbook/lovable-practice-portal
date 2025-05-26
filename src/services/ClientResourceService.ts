@@ -10,6 +10,11 @@ export class ClientResourceService {
         return { data: null, error: 'User not authenticated' };
       }
 
+      const tenantId = user.user_metadata?.tenant_id;
+      if (!tenantId) {
+        return { data: null, error: 'Tenant ID not found in user metadata' };
+      }
+
       let file_path = null;
       let file_size = null;
       let mime_type = null;
@@ -17,7 +22,8 @@ export class ClientResourceService {
       // Handle file upload for document type
       if (input.resource_type === 'document' && input.file) {
         const fileExt = input.file.name.split('.').pop();
-        const fileName = `resources/${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        // Use tenant-isolated file structure: tenant_id/user_id/filename
+        const fileName = `${tenantId}/${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('documents')
@@ -38,7 +44,7 @@ export class ClientResourceService {
         .from('tbl_client_resources' as any)
         .insert({
           client_id: input.client_id,
-          tenant_id: user.user_metadata?.tenant_id,
+          tenant_id: tenantId,
           resource_type: input.resource_type,
           title: input.title,
           description: input.description,
