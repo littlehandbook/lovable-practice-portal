@@ -1,33 +1,69 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layouts/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Search, MoreHorizontal } from 'lucide-react';
+import { Search, MoreHorizontal, User } from 'lucide-react';
 import { AddClientDialog } from '@/components/AddClientDialog';
-import { ClientResourcesList } from '@/components/practice/ClientResourcesList';
+import { ClientService } from '@/services/ClientService';
+import { Client } from '@/models';
+import { useToast } from '@/hooks/use-toast';
 
 const ClientsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Mock data for clients
-  const mockClients = [
-    { id: 1, name: 'Jane Doe', email: 'jane@example.com', phone: '(555) 123-4567', status: 'Active', lastSession: '2 days ago' },
-    { id: 2, name: 'John Smith', email: 'john@example.com', phone: '(555) 987-6543', status: 'Active', lastSession: '1 week ago' },
-    { id: 3, name: 'Emily Johnson', email: 'emily@example.com', phone: '(555) 456-7890', status: 'Inactive', lastSession: '3 weeks ago' },
-    { id: 4, name: 'Michael Brown', email: 'michael@example.com', phone: '(555) 789-0123', status: 'Active', lastSession: 'Yesterday' },
-    { id: 5, name: 'Sarah Williams', email: 'sarah@example.com', phone: '(555) 234-5678', status: 'Active', lastSession: 'Today' },
-  ];
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-  const filteredClients = mockClients.filter(client =>
+  const fetchClients = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await ClientService.getClients();
+      
+      if (error) {
+        console.error('Error fetching clients:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load clients',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      setClients(data);
+    } catch (error) {
+      console.error('Unexpected error fetching clients:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load clients',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchClients();
+  }, []);
+
+  const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    client.email.toLowerCase().includes(searchQuery.toLowerCase())
+    (client.email && client.email.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const handleClientAdded = () => {
-    // This would normally refresh the client list from the server
-    // For now, it's just a placeholder since we're using mock data
-    console.log('Client added - would refresh client list here');
+    // Refresh the client list after a new client is added
+    fetchClients();
+    toast({
+      title: 'Success',
+      description: 'Client added successfully'
+    });
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString();
   };
 
   return (
@@ -55,78 +91,100 @@ const ClientsPage = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Name
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Email
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Phone
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Last Session
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredClients.length > 0 ? (
-                      filteredClients.map((client) => (
-                        <tr key={client.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <Link to={`/practice/clients/${client.id}`} className="text-sm font-medium text-teal-700 hover:underline">
-                              {client.name}
-                            </Link>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {client.email}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {client.phone}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span
-                              className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                client.status === 'Active'
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-gray-100 text-gray-800'
-                              }`}
-                            >
-                              {client.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {client.lastSession}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <button className="text-gray-500 hover:text-gray-700">
-                              <MoreHorizontal className="h-5 w-5" />
-                            </button>
+            {loading ? (
+              <div className="text-center py-8">
+                <p className="text-gray-500">Loading clients...</p>
+              </div>
+            ) : (
+              <div className="rounded-md border overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Name
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Email
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Phone
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Created
+                        </th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredClients.length > 0 ? (
+                        filteredClients.map((client) => (
+                          <tr key={client.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 h-8 w-8">
+                                  <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
+                                    <User className="h-4 w-4 text-gray-500" />
+                                  </div>
+                                </div>
+                                <div className="ml-4">
+                                  <Link 
+                                    to={`/practice/clients/${client.id}`} 
+                                    className="text-sm font-medium text-teal-700 hover:underline"
+                                  >
+                                    {client.name}
+                                  </Link>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {client.email || 'Not provided'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {client.phone || 'Not provided'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                Active
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {formatDate(client.created_at)}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              <button className="text-gray-500 hover:text-gray-700">
+                                <MoreHorizontal className="h-5 w-5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="px-6 py-8 text-center">
+                            <div className="text-gray-500">
+                              <User className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+                              {searchQuery ? (
+                                <p>No clients found matching "{searchQuery}"</p>
+                              ) : (
+                                <div>
+                                  <p className="text-lg font-medium">No clients yet</p>
+                                  <p className="text-sm mt-1">Get started by adding your first client</p>
+                                </div>
+                              )}
+                            </div>
                           </td>
                         </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
-                          No clients found matching your search.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
