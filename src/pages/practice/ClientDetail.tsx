@@ -10,11 +10,17 @@ import { User, Calendar, FileText, BookOpen } from 'lucide-react';
 const ClientDetailPage = () => {
   const { clientId } = useParams<{ clientId: string }>();
 
-  if (!clientId) {
+  // Validate that clientId is a proper UUID format
+  const isValidUUID = (id: string) => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(id);
+  };
+
+  if (!clientId || !isValidUUID(clientId)) {
     return (
       <DashboardLayout>
         <div className="text-center py-8">
-          <p className="text-gray-500">Client not found</p>
+          <p className="text-gray-500">Invalid client ID. Please select a valid client.</p>
         </div>
       </DashboardLayout>
     );

@@ -63,7 +63,8 @@ const ClientDocumentsPage = () => {
 
   const loadResources = async () => {
     try {
-      const mockClientId = 'client-123';
+      // Use a proper UUID format for mock client ID
+      const mockClientId = '550e8400-e29b-41d4-a716-446655440000';
       const { data, error } = await ClientResourceService.getClientResources(mockClientId);
       if (error) {
         console.error('Failed to load resources:', error);

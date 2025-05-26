@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { DocumentRecord, ServiceError } from '@/models';
 
@@ -14,9 +13,14 @@ export class DocumentService {
         return { data: null, error: 'User not authenticated' };
       }
 
-      // Create unique file path
+      const tenantId = user.user_metadata?.tenant_id;
+      if (!tenantId) {
+        return { data: null, error: 'Tenant ID not found in user metadata' };
+      }
+
+      // Create tenant-isolated file path: tenant_id/user_id/filename
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const fileName = `${tenantId}/${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
       // Upload to storage
       const { data: uploadData, error: uploadError } = await supabase.storage
@@ -39,7 +43,7 @@ export class DocumentService {
           document_type: documentType,
           client_id: clientId,
           uploaded_by: user.id,
-          tenant_id: user.user_metadata?.tenant_id,
+          tenant_id: tenantId,
           is_shared_with_client: documentType === 'client_upload'
         })
         .select()
