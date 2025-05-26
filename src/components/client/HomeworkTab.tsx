@@ -1,45 +1,55 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { BookOpen, Calendar, CheckCircle, Clock } from 'lucide-react';
-
-// Mock homework data that would come from session notes
-const mockHomework = [
-  {
-    id: '1',
-    sessionDate: '2024-01-15',
-    title: 'Deep Breathing Exercises',
-    description: 'Practice deep breathing exercises daily for 10 minutes',
-    dueDate: '2024-01-22',
-    status: 'pending',
-    assignedBy: 'Dr. Smith'
-  },
-  {
-    id: '2',
-    sessionDate: '2024-01-08',
-    title: 'Thought Record Worksheet',
-    description: 'Complete thought record worksheet when experiencing negative thoughts',
-    dueDate: '2024-01-15',
-    status: 'completed',
-    assignedBy: 'Dr. Smith'
-  },
-  {
-    id: '3',
-    sessionDate: '2024-01-01',
-    title: 'Mindfulness Journal',
-    description: 'Keep a daily mindfulness journal noting observations and feelings',
-    dueDate: '2024-01-08',
-    status: 'completed',
-    assignedBy: 'Dr. Smith'
-  }
-];
+import { SessionNotesService, Homework } from '@/services/SessionNotesService';
+import { useToast } from '@/hooks/use-toast';
 
 interface HomeworkTabProps {
   loading?: boolean;
 }
 
-export const HomeworkTab: React.FC<HomeworkTabProps> = ({ loading = false }) => {
+export const HomeworkTab: React.FC<HomeworkTabProps> = ({ loading: propLoading = false }) => {
+  const [homework, setHomework] = useState<Homework[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  // Mock client ID - in real app this would come from auth context
+  const clientId = 'mock-client-id';
+
+  useEffect(() => {
+    const fetchHomework = async () => {
+      try {
+        const { data, error } = await SessionNotesService.getHomework(clientId);
+        
+        if (error) {
+          console.error('Error fetching homework:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to load homework assignments',
+            variant: 'destructive'
+          });
+          return;
+        }
+
+        setHomework(data);
+      } catch (error) {
+        console.error('Unexpected error fetching homework:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load homework assignments',
+          variant: 'destructive'
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHomework();
+  }, [clientId, toast]);
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
   };
@@ -61,10 +71,47 @@ export const HomeworkTab: React.FC<HomeworkTabProps> = ({ loading = false }) => 
     }
   };
 
-  const pendingHomework = mockHomework.filter(hw => hw.status === 'pending');
-  const completedHomework = mockHomework.filter(hw => hw.status === 'completed');
+  const handleMarkComplete = async (homeworkId: string) => {
+    try {
+      const { error } = await SessionNotesService.updateHomework(homeworkId, {
+        status: 'completed',
+        completed_at: new Date().toISOString()
+      });
 
-  if (loading) {
+      if (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to mark homework as complete',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Update local state
+      setHomework(prev => prev.map(hw => 
+        hw.id === homeworkId 
+          ? { ...hw, status: 'completed', completed_at: new Date().toISOString() }
+          : hw
+      ));
+
+      toast({
+        title: 'Success',
+        description: 'Homework marked as complete',
+      });
+    } catch (error) {
+      console.error('Error marking homework complete:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to mark homework as complete',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const pendingHomework = homework.filter(hw => hw.status === 'pending');
+  const completedHomework = homework.filter(hw => hw.status === 'completed');
+
+  if (loading || propLoading) {
     return (
       <Card>
         <CardContent className="p-6">
@@ -89,29 +136,40 @@ export const HomeworkTab: React.FC<HomeworkTabProps> = ({ loading = false }) => 
         <CardContent>
           {pendingHomework.length > 0 ? (
             <div className="space-y-4">
-              {pendingHomework.map((homework) => (
-                <Card key={homework.id} className="border-l-4 border-l-yellow-600">
+              {pendingHomework.map((hw) => (
+                <Card key={hw.id} className="border-l-4 border-l-yellow-600">
                   <CardContent className="p-4">
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
-                        <h3 className="font-medium text-lg">{homework.title}</h3>
-                        <p className="text-gray-600 mt-1">{homework.description}</p>
+                        <h3 className="font-medium text-lg">{hw.title}</h3>
+                        {hw.description && (
+                          <p className="text-gray-600 mt-1">{hw.description}</p>
+                        )}
                       </div>
-                      <Badge className={`ml-4 ${getStatusColor(homework.status)} flex items-center`}>
-                        {getStatusIcon(homework.status)}
-                        <span className="ml-1 capitalize">{homework.status}</span>
-                      </Badge>
+                      <div className="flex items-center gap-2 ml-4">
+                        <Badge className={`${getStatusColor(hw.status)} flex items-center`}>
+                          {getStatusIcon(hw.status)}
+                          <span className="ml-1 capitalize">{hw.status}</span>
+                        </Badge>
+                        <Button
+                          size="sm"
+                          onClick={() => handleMarkComplete(hw.id)}
+                        >
+                          Mark Complete
+                        </Button>
+                      </div>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-gray-500">
                       <span className="flex items-center">
                         <Calendar className="h-3 w-3 mr-1" />
-                        Assigned: {formatDate(homework.sessionDate)}
+                        Assigned: {formatDate(hw.assigned_date)}
                       </span>
-                      <span className="flex items-center">
-                        <Calendar className="h-3 w-3 mr-1" />
-                        Due: {formatDate(homework.dueDate)}
-                      </span>
-                      <span>Assigned by: {homework.assignedBy}</span>
+                      {hw.due_date && (
+                        <span className="flex items-center">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          Due: {formatDate(hw.due_date)}
+                        </span>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -138,29 +196,38 @@ export const HomeworkTab: React.FC<HomeworkTabProps> = ({ loading = false }) => 
         <CardContent>
           {completedHomework.length > 0 ? (
             <div className="space-y-4">
-              {completedHomework.map((homework) => (
-                <Card key={homework.id} className="border-l-4 border-l-green-600 opacity-75">
+              {completedHomework.map((hw) => (
+                <Card key={hw.id} className="border-l-4 border-l-green-600 opacity-75">
                   <CardContent className="p-4">
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
-                        <h3 className="font-medium text-lg">{homework.title}</h3>
-                        <p className="text-gray-600 mt-1">{homework.description}</p>
+                        <h3 className="font-medium text-lg">{hw.title}</h3>
+                        {hw.description && (
+                          <p className="text-gray-600 mt-1">{hw.description}</p>
+                        )}
                       </div>
-                      <Badge className={`ml-4 ${getStatusColor(homework.status)} flex items-center`}>
-                        {getStatusIcon(homework.status)}
-                        <span className="ml-1 capitalize">{homework.status}</span>
+                      <Badge className={`ml-4 ${getStatusColor(hw.status)} flex items-center`}>
+                        {getStatusIcon(hw.status)}
+                        <span className="ml-1 capitalize">{hw.status}</span>
                       </Badge>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-gray-500">
                       <span className="flex items-center">
                         <Calendar className="h-3 w-3 mr-1" />
-                        Assigned: {formatDate(homework.sessionDate)}
+                        Assigned: {formatDate(hw.assigned_date)}
                       </span>
-                      <span className="flex items-center">
-                        <Calendar className="h-3 w-3 mr-1" />
-                        Due: {formatDate(homework.dueDate)}
-                      </span>
-                      <span>Assigned by: {homework.assignedBy}</span>
+                      {hw.due_date && (
+                        <span className="flex items-center">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          Due: {formatDate(hw.due_date)}
+                        </span>
+                      )}
+                      {hw.completed_at && (
+                        <span className="flex items-center">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Completed: {formatDate(hw.completed_at)}
+                        </span>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
