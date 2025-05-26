@@ -53,11 +53,16 @@ export class ClientService {
         return { data: null, error: 'User not authenticated' };
       }
 
+      console.log('Creating client with user:', user);
+      console.log('User metadata:', user.user_metadata);
+
+      // For now, let's try without tenant_id to see if that's the issue
+      // We'll need to add tenant_id handling later based on your auth setup
       const { data, error } = await supabase
         .from('tbl_clients' as any)
         .insert({
           ...clientData,
-          tenant_id: user.user_metadata?.tenant_id,
+          // tenant_id: user.user_metadata?.tenant_id, // Commenting out for now
           created_by: user.id,
           updated_by: user.id
         })
@@ -69,6 +74,7 @@ export class ClientService {
         return { data: null, error: error.message };
       }
 
+      console.log('Client created successfully:', data);
       // TODO: remove this cast when Supabase types are regenerated
       const client = data as unknown as Client;
       return { data: client, error: null };
