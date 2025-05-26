@@ -6,7 +6,7 @@ export class ClientService {
   static async getClients(): Promise<{ data: Client[]; error: string | null }> {
     try {
       const { data, error } = await supabase
-        .from('tbl_clients' as any)
+        .from('tbl_clients')
         .select('*')
         .order('name');
 
@@ -15,8 +15,7 @@ export class ClientService {
         return { data: [], error: error.message };
       }
 
-      // TODO: remove this cast when Supabase types are regenerated
-      const clients = (data || []) as unknown as Client[];
+      const clients = (data || []) as Client[];
       return { data: clients, error: null };
     } catch (error: any) {
       console.error('Unexpected error in getClients:', error);
@@ -27,7 +26,7 @@ export class ClientService {
   static async getClient(clientId: string): Promise<{ data: Client | null; error: string | null }> {
     try {
       const { data, error } = await supabase
-        .from('tbl_clients' as any)
+        .from('tbl_clients')
         .select('*')
         .eq('id', clientId)
         .single();
@@ -37,8 +36,7 @@ export class ClientService {
         return { data: null, error: error.message };
       }
 
-      // TODO: remove this cast when Supabase types are regenerated
-      const client = data as unknown as Client;
+      const client = data as Client;
       return { data: client, error: null };
     } catch (error: any) {
       console.error('Unexpected error in getClient:', error);
@@ -54,15 +52,15 @@ export class ClientService {
       }
 
       console.log('Creating client with user:', user);
-      console.log('User metadata:', user.user_metadata);
-
-      // For now, let's try without tenant_id to see if that's the issue
-      // We'll need to add tenant_id handling later based on your auth setup
+      
+      // Get tenant_id from JWT claims or user metadata
+      const tenantId = user.user_metadata?.tenant_id;
+      
       const { data, error } = await supabase
-        .from('tbl_clients' as any)
+        .from('tbl_clients')
         .insert({
           ...clientData,
-          // tenant_id: user.user_metadata?.tenant_id, // Commenting out for now
+          tenant_id: tenantId,
           created_by: user.id,
           updated_by: user.id
         })
@@ -75,8 +73,7 @@ export class ClientService {
       }
 
       console.log('Client created successfully:', data);
-      // TODO: remove this cast when Supabase types are regenerated
-      const client = data as unknown as Client;
+      const client = data as Client;
       return { data: client, error: null };
     } catch (error: any) {
       console.error('Unexpected error in createClient:', error);
@@ -92,7 +89,7 @@ export class ClientService {
       }
 
       const { data, error } = await supabase
-        .from('tbl_clients' as any)
+        .from('tbl_clients')
         .update({
           ...clientData,
           updated_by: user.id
@@ -106,8 +103,7 @@ export class ClientService {
         return { data: null, error: error.message };
       }
 
-      // TODO: remove this cast when Supabase types are regenerated
-      const client = data as unknown as Client;
+      const client = data as Client;
       return { data: client, error: null };
     } catch (error: any) {
       console.error('Unexpected error in updateClient:', error);
