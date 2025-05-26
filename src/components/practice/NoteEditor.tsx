@@ -16,11 +16,14 @@ interface NoteEditorProps {
   onSave: (noteData: { template: string; content: Record<string, string>; sessionDate: Date }) => void;
   onCancel: () => void;
   initialData?: { template: string; content: Record<string, string>; sessionDate?: Date };
-  availableTemplates?: Template[]; // This prop is now optional since we use the hook
+  availableTemplates?: Template[];
 }
 
-export function NoteEditor({ onSave, onCancel, initialData }: NoteEditorProps) {
-  const { enabledTemplates, loading, error, refreshTemplates } = useNoteTemplates();
+export function NoteEditor({ onSave, onCancel, initialData, availableTemplates }: NoteEditorProps) {
+  const { enabledTemplates: hookTemplates, loading, error, refreshTemplates } = useNoteTemplates();
+  
+  // Use the prop if provided, otherwise fall back to hook
+  const templatesToShow = availableTemplates ?? hookTemplates;
   
   const [template, setTemplate] = useState<string>('');
   const [fields, setFields] = useState<Record<string, string>>({});
@@ -29,27 +32,32 @@ export function NoteEditor({ onSave, onCancel, initialData }: NoteEditorProps) {
 
   // Debug logging
   useEffect(() => {
-    console.log('NoteEditor - Enabled templates:', enabledTemplates);
+    console.log('NoteEditor - Templates to show:', templatesToShow);
+    console.log('NoteEditor - Available templates prop:', availableTemplates);
+    console.log('NoteEditor - Hook templates:', hookTemplates);
     console.log('NoteEditor - Loading:', loading);
     console.log('NoteEditor - Error:', error);
-  }, [enabledTemplates, loading, error]);
+  }, [templatesToShow, availableTemplates, hookTemplates, loading, error]);
 
   // Initialize form when templates load or initial data changes
   useEffect(() => {
-    if (loading) return;
+    // If we have availableTemplates prop, don't wait for hook loading
+    const isLoading = !availableTemplates && loading;
+    
+    if (isLoading) return;
 
     if (initialData) {
       setTemplate(initialData.template || '');
       setFields(initialData.content || {});
       setSessionDate(initialData.sessionDate || new Date());
-    } else if (enabledTemplates.length > 0) {
-      // Set default template to first enabled template
-      const defaultTemplate = enabledTemplates[0]?.value || '';
+    } else if (templatesToShow.length > 0) {
+      // Set default template to first available template
+      const defaultTemplate = templatesToShow[0]?.value || '';
       console.log('Setting default template:', defaultTemplate);
       setTemplate(defaultTemplate);
       
       if (defaultTemplate) {
-        const tmpl = enabledTemplates.find((t) => t.value === defaultTemplate);
+        const tmpl = templatesToShow.find((t) => t.value === defaultTemplate);
         if (tmpl) {
           const init: Record<string, string> = {};
           tmpl.fields.forEach((f) => (init[f.key] = ""));
@@ -57,14 +65,14 @@ export function NoteEditor({ onSave, onCancel, initialData }: NoteEditorProps) {
         }
       }
     }
-  }, [enabledTemplates, initialData, loading]);
+  }, [templatesToShow, initialData, loading, availableTemplates]);
 
   // Initialize fields when template changes
   const handleTemplateChange = (value: string) => {
     console.log('Template changed to:', value);
     setTemplate(value);
     setValidationError(null);
-    const tmpl = enabledTemplates.find((t) => t.value === value);
+    const tmpl = templatesToShow.find((t) => t.value === value);
     if (tmpl) {
       const init: Record<string, string> = {};
       tmpl.fields.forEach((f) => (init[f.key] = ""));
@@ -97,11 +105,11 @@ export function NoteEditor({ onSave, onCancel, initialData }: NoteEditorProps) {
   };
 
   // Get current template fields
-  const currentTemplate = enabledTemplates.find((t) => t.value === template);
+  const currentTemplate = templatesToShow.find((t) => t.value === template);
   const fieldDefs = currentTemplate?.fields || [];
 
-  // Loading state
-  if (loading) {
+  // Loading state (only if using hook and no prop provided)
+  if (!availableTemplates && loading) {
     return (
       <Card className="w-full">
         <CardHeader>
@@ -117,8 +125,8 @@ export function NoteEditor({ onSave, onCancel, initialData }: NoteEditorProps) {
     );
   }
 
-  // Error state
-  if (error) {
+  // Error state (only if using hook and no prop provided)
+  if (!availableTemplates && error) {
     return (
       <Card className="w-full">
         <CardHeader>
@@ -137,8 +145,8 @@ export function NoteEditor({ onSave, onCancel, initialData }: NoteEditorProps) {
     );
   }
 
-  // No enabled templates
-  if (enabledTemplates.length === 0) {
+  // No templates available
+  if (templatesToShow.length === 0) {
     return (
       <Card className="w-full">
         <CardHeader>
@@ -148,8 +156,10 @@ export function NoteEditor({ onSave, onCancel, initialData }: NoteEditorProps) {
           <div className="flex items-center justify-center py-8 text-gray-600">
             <AlertCircle className="h-5 w-5 mr-2" />
             <div className="text-center">
-              <p>No templates are currently enabled.</p>
-              <p className="text-sm mt-1">Please enable at least one template in Settings.</p>
+              <p>No templates are currently available.</p>
+              <p className="text-sm mt-1">
+                {availableTemplates ? 'No templates provided.' : 'Please enable at least one template in Settings.'}
+              </p>
             </div>
           </div>
         </CardContent>
@@ -171,7 +181,7 @@ export function NoteEditor({ onSave, onCancel, initialData }: NoteEditorProps) {
                 <SelectValue placeholder="Select a template" />
               </SelectTrigger>
               <SelectContent>
-                {enabledTemplates.map((t) => (
+                {templatesToShow.map((t) => (
                   <SelectItem key={t.id} value={t.value}>
                     {t.label}
                   </SelectItem>
@@ -180,7 +190,8 @@ export function NoteEditor({ onSave, onCancel, initialData }: NoteEditorProps) {
             </Select>
             {/* Debug info */}
             <div className="text-xs text-gray-500">
-              Current: {template}, Available: {enabledTemplates.length}
+              Current: {template}, Available: {templatesToShow.length} 
+              {availableTemplates ? ' (from prop)' : ' (from hook)'}
             </div>
           </div>
 
