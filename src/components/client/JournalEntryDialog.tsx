@@ -107,7 +107,7 @@ export const JournalEntryDialog: React.FC<JournalEntryDialogProps> = ({
             <Checkbox
               id="share-with-practitioner"
               checked={isShared}
-              onCheckedChange={setIsShared}
+              onCheckedChange={(checked) => setIsShared(!!checked)}
               disabled={saving || loading}
             />
             <Label htmlFor="share-with-practitioner">
