@@ -12,6 +12,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { ConfigurationTab } from '@/components/ConfigurationTab';
 import { UsersTab } from '@/components/UsersTab';
 import { BrandingTab } from '@/components/BrandingTab';
+import { NoteTemplateSettings } from '@/components/practice/NoteTemplateSettings';
 
 const SettingsPage = () => {
   const { user } = useAuth();
@@ -76,10 +77,11 @@ const SettingsPage = () => {
         <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
         
         <Tabs defaultValue={activeTab} value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-6 w-full max-w-2xl">
+          <TabsList className="grid grid-cols-7 w-full max-w-3xl">
             <TabsTrigger value="profile">Profile</TabsTrigger>
             <TabsTrigger value="account">Account</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            <TabsTrigger value="templates">Templates</TabsTrigger>
             <TabsTrigger value="configuration">Configuration</TabsTrigger>
             <TabsTrigger value="branding">Branding</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
@@ -322,6 +324,10 @@ const SettingsPage = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+          
+          <TabsContent value="templates" className="space-y-6">
+            <NoteTemplateSettings />
           </TabsContent>
           
           <TabsContent value="configuration" className="space-y-6">

@@ -4,18 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2 } from "lucide-react";
 
 // Define the structure of a template
 interface Template {
   label: string;
   value: string;
-  fields: { key: string; label: string }[];
+  fields: { key: string; label: string; description?: string }[];
 }
 
-// Predefined note templates
+// Predefined note templates (these would come from settings in a real app)
 const predefinedTemplates: Template[] = [
   {
     label: "Free Field",
@@ -26,49 +24,49 @@ const predefinedTemplates: Template[] = [
     label: "SOAP Notes",
     value: "soap",
     fields: [
-      { key: "subjective", label: "Subjective - Client's perspective, feelings, and reported experiences" },
-      { key: "objective", label: "Objective - Observable behaviors, appearance, and factual data" },
-      { key: "assessment", label: "Assessment - Clinical interpretation and progress analysis" },
-      { key: "plan", label: "Plan - Future treatment course and next steps" },
+      { key: "subjective", label: "Subjective", description: "Client's perspective, feelings, and reported experiences" },
+      { key: "objective", label: "Objective", description: "Observable behaviors, appearance, and factual data" },
+      { key: "assessment", label: "Assessment", description: "Clinical interpretation and progress analysis" },
+      { key: "plan", label: "Plan", description: "Future treatment course and next steps" },
     ],
   },
   {
     label: "BIRP Notes",
     value: "birp",
     fields: [
-      { key: "behavior", label: "Behavior - Observable and reported behaviors" },
-      { key: "intervention", label: "Intervention - Therapeutic interventions used" },
-      { key: "response", label: "Response - Client's response to interventions" },
-      { key: "plan", label: "Plan - Future session plans and strategies" },
+      { key: "behavior", label: "Behavior", description: "Observable and reported behaviors" },
+      { key: "intervention", label: "Intervention", description: "Therapeutic interventions used" },
+      { key: "response", label: "Response", description: "Client's response to interventions" },
+      { key: "plan", label: "Plan", description: "Future session plans and strategies" },
     ],
   },
   {
     label: "DAP Notes",
     value: "dap",
     fields: [
-      { key: "data", label: "Data - Combined subjective and objective information" },
-      { key: "assessment", label: "Assessment - Clinical assessment of the data" },
-      { key: "plan", label: "Plan - Future treatment plan" },
+      { key: "data", label: "Data", description: "Combined subjective and objective information" },
+      { key: "assessment", label: "Assessment", description: "Clinical assessment of the data" },
+      { key: "plan", label: "Plan", description: "Future treatment plan" },
     ],
   },
   {
     label: "PIRP Notes",
     value: "pirp",
     fields: [
-      { key: "problem", label: "Problem - Specific problems addressed in session" },
-      { key: "intervention", label: "Intervention - Interventions used for problems" },
-      { key: "response", label: "Response - Client's response to interventions" },
-      { key: "plan", label: "Plan - Future plan for addressing problems" },
+      { key: "problem", label: "Problem", description: "Specific problems addressed in session" },
+      { key: "intervention", label: "Intervention", description: "Interventions used for problems" },
+      { key: "response", label: "Response", description: "Client's response to interventions" },
+      { key: "plan", label: "Plan", description: "Future plan for addressing problems" },
     ],
   },
   {
     label: "GIRP Notes",
     value: "girp",
     fields: [
-      { key: "goal", label: "Goal - Client's treatment goals addressed" },
-      { key: "intervention", label: "Intervention - Interventions aimed at goals" },
-      { key: "response", label: "Response - Client's response in relation to goals" },
-      { key: "plan", label: "Plan - Continued work on goals" },
+      { key: "goal", label: "Goal", description: "Client's treatment goals addressed" },
+      { key: "intervention", label: "Intervention", description: "Interventions aimed at goals" },
+      { key: "response", label: "Response", description: "Client's response in relation to goals" },
+      { key: "plan", label: "Plan", description: "Continued work on goals" },
     ],
   },
 ];
@@ -82,53 +80,22 @@ interface NoteEditorProps {
 export function NoteEditor({ onSave, onCancel, initialData }: NoteEditorProps) {
   const [template, setTemplate] = useState<string>(initialData?.template || "free");
   const [fields, setFields] = useState<Record<string, string>>(initialData?.content || { content: "" });
-  const [customFields, setCustomFields] = useState<{ key: string; label: string }[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   // Initialize fields when template changes
   const handleTemplateChange = (value: string) => {
     setTemplate(value);
     setError(null);
-    if (value === "custom") {
-      setCustomFields([]);
-      setFields({});
-    } else {
-      const tmpl = predefinedTemplates.find((t) => t.value === value);
-      if (tmpl) {
-        const init: Record<string, string> = {};
-        tmpl.fields.forEach((f) => (init[f.key] = ""));
-        setFields(init);
-      }
+    const tmpl = predefinedTemplates.find((t) => t.value === value);
+    if (tmpl) {
+      const init: Record<string, string> = {};
+      tmpl.fields.forEach((f) => (init[f.key] = ""));
+      setFields(init);
     }
   };
 
   const handleFieldChange = (key: string, value: string) => {
     setFields((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const addCustomField = () => {
-    const key = `field_${customFields.length + 1}`;
-    const newField = { key, label: "New Field" };
-    setCustomFields((prev) => [...prev, newField]);
-    setFields((prev) => ({ ...prev, [key]: "" }));
-  };
-
-  const removeCustomField = (index: number) => {
-    const fieldToRemove = customFields[index];
-    setCustomFields((prev) => prev.filter((_, i) => i !== index));
-    setFields((prev) => {
-      const updated = { ...prev };
-      delete updated[fieldToRemove.key];
-      return updated;
-    });
-  };
-
-  const handleCustomLabelChange = (index: number, label: string) => {
-    setCustomFields((prev) => {
-      const updated = [...prev];
-      updated[index].label = label;
-      return updated;
-    });
   };
 
   const handleSave = () => {
@@ -142,11 +109,9 @@ export function NoteEditor({ onSave, onCancel, initialData }: NoteEditorProps) {
     onSave({ template, content: fields });
   };
 
-  // Determine which fields to render
-  const fieldDefs =
-    template === "custom"
-      ? customFields
-      : predefinedTemplates.find((t) => t.value === template)?.fields || [];
+  // Get current template fields
+  const currentTemplate = predefinedTemplates.find((t) => t.value === template);
+  const fieldDefs = currentTemplate?.fields || [];
 
   return (
     <Card className="w-full">
@@ -166,46 +131,21 @@ export function NoteEditor({ onSave, onCancel, initialData }: NoteEditorProps) {
                   {t.label}
                 </SelectItem>
               ))}
-              <SelectItem value="custom">Custom Template</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        {template === "custom" && (
-          <div className="flex items-center space-x-2">
-            <Button type="button" variant="outline" size="sm" onClick={addCustomField}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Field
-            </Button>
-          </div>
-        )}
-
         <div className="space-y-4">
-          {fieldDefs.map((field, idx) => (
+          {fieldDefs.map((field) => (
             <div key={field.key} className="space-y-2">
-              <div className="flex items-center justify-between">
-                {template === "custom" ? (
-                  <div className="flex items-center space-x-2 flex-1">
-                    <Input
-                      type="text"
-                      placeholder="Field Label"
-                      value={field.label}
-                      onChange={(e) => handleCustomLabelChange(idx, e.target.value)}
-                      className="max-w-xs"
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeCustomField(idx)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <Label htmlFor={field.key}>{field.label}</Label>
+              <Label htmlFor={field.key}>
+                {field.label}
+                {field.description && (
+                  <span className="text-sm text-gray-500 font-normal block">
+                    {field.description}
+                  </span>
                 )}
-              </div>
+              </Label>
               <Textarea
                 id={field.key}
                 placeholder={`Enter ${field.label.toLowerCase()}`}
