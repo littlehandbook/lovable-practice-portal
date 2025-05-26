@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { DashboardLayout } from '@/components/layouts/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +7,86 @@ import { Label } from '@/components/ui/label';
 import { Search, Plus, Check, Save, Lock, AlertTriangle, Clock } from 'lucide-react';
 import { NoteEditor } from '@/components/practice/NoteEditor';
 
+// Template definitions that match the ones in NoteTemplateSettings
+const defaultTemplates = [
+  {
+    id: 'free',
+    label: 'Free Field',
+    value: 'free',
+    fields: [{ key: 'content', label: 'Session Notes' }],
+    isEnabled: true,
+    isCustom: false,
+  },
+  {
+    id: 'soap',
+    label: 'SOAP Notes',
+    value: 'soap',
+    fields: [
+      { key: 'subjective', label: 'Subjective', description: 'Client\'s perspective, feelings, and reported experiences' },
+      { key: 'objective', label: 'Objective', description: 'Observable behaviors, appearance, and factual data' },
+      { key: 'assessment', label: 'Assessment', description: 'Clinical interpretation and progress analysis' },
+      { key: 'plan', label: 'Plan', description: 'Future treatment course and next steps' },
+    ],
+    isEnabled: true,
+    isCustom: false,
+  },
+  {
+    id: 'birp',
+    label: 'BIRP Notes',
+    value: 'birp',
+    fields: [
+      { key: 'behavior', label: 'Behavior', description: 'Observable and reported behaviors' },
+      { key: 'intervention', label: 'Intervention', description: 'Therapeutic interventions used' },
+      { key: 'response', label: 'Response', description: 'Client\'s response to interventions' },
+      { key: 'plan', label: 'Plan', description: 'Future session plans and strategies' },
+    ],
+    isEnabled: true,
+    isCustom: false,
+  },
+  {
+    id: 'dap',
+    label: 'DAP Notes',
+    value: 'dap',
+    fields: [
+      { key: 'data', label: 'Data', description: 'Combined subjective and objective information' },
+      { key: 'assessment', label: 'Assessment', description: 'Clinical assessment of the data' },
+      { key: 'plan', label: 'Plan', description: 'Future treatment plan' },
+    ],
+    isEnabled: true,
+    isCustom: false,
+  },
+  {
+    id: 'pirp',
+    label: 'PIRP Notes',
+    value: 'pirp',
+    fields: [
+      { key: 'problem', label: 'Problem', description: 'Specific problems addressed in session' },
+      { key: 'intervention', label: 'Intervention', description: 'Interventions used for problems' },
+      { key: 'response', label: 'Response', description: 'Client\'s response to interventions' },
+      { key: 'plan', label: 'Plan', description: 'Future plan for addressing problems' },
+    ],
+    isEnabled: true,
+    isCustom: false,
+  },
+  {
+    id: 'girp',
+    label: 'GIRP Notes',
+    value: 'girp',
+    fields: [
+      { key: 'goal', label: 'Goal', description: 'Client\'s treatment goals addressed' },
+      { key: 'intervention', label: 'Intervention', description: 'Interventions aimed at goals' },
+      { key: 'response', label: 'Response', description: 'Client\'s response in relation to goals' },
+      { key: 'plan', label: 'Plan', description: 'Continued work on goals' },
+    ],
+    isEnabled: true,
+    isCustom: false,
+  },
+];
+
 const NotesPage = () => {
+  // In a real app, this would come from the template settings
+  const [availableTemplates] = useState(defaultTemplates);
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedNote, setSelectedNote] = useState<number | null>(null);
   const [noteContent, setNoteContent] = useState('');
@@ -215,6 +293,7 @@ const NotesPage = () => {
                 <NoteEditor
                   onSave={handleSaveNote}
                   onCancel={handleCancelEdit}
+                  availableTemplates={availableTemplates}
                   initialData={selectedNote ? {
                     template: mockNotes.find(n => n.id === selectedNote)?.template || 'free',
                     content: { content: mockNotes.find(n => n.id === selectedNote)?.content || '' }

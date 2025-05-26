@@ -8,77 +8,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 // Define the structure of a template
 interface Template {
+  id: string;
   label: string;
   value: string;
   fields: { key: string; label: string; description?: string }[];
+  isEnabled: boolean;
+  isCustom: boolean;
 }
-
-// Predefined note templates (these would come from settings in a real app)
-const predefinedTemplates: Template[] = [
-  {
-    label: "Free Field",
-    value: "free",
-    fields: [{ key: "content", label: "Session Notes" }],
-  },
-  {
-    label: "SOAP Notes",
-    value: "soap",
-    fields: [
-      { key: "subjective", label: "Subjective", description: "Client's perspective, feelings, and reported experiences" },
-      { key: "objective", label: "Objective", description: "Observable behaviors, appearance, and factual data" },
-      { key: "assessment", label: "Assessment", description: "Clinical interpretation and progress analysis" },
-      { key: "plan", label: "Plan", description: "Future treatment course and next steps" },
-    ],
-  },
-  {
-    label: "BIRP Notes",
-    value: "birp",
-    fields: [
-      { key: "behavior", label: "Behavior", description: "Observable and reported behaviors" },
-      { key: "intervention", label: "Intervention", description: "Therapeutic interventions used" },
-      { key: "response", label: "Response", description: "Client's response to interventions" },
-      { key: "plan", label: "Plan", description: "Future session plans and strategies" },
-    ],
-  },
-  {
-    label: "DAP Notes",
-    value: "dap",
-    fields: [
-      { key: "data", label: "Data", description: "Combined subjective and objective information" },
-      { key: "assessment", label: "Assessment", description: "Clinical assessment of the data" },
-      { key: "plan", label: "Plan", description: "Future treatment plan" },
-    ],
-  },
-  {
-    label: "PIRP Notes",
-    value: "pirp",
-    fields: [
-      { key: "problem", label: "Problem", description: "Specific problems addressed in session" },
-      { key: "intervention", label: "Intervention", description: "Interventions used for problems" },
-      { key: "response", label: "Response", description: "Client's response to interventions" },
-      { key: "plan", label: "Plan", description: "Future plan for addressing problems" },
-    ],
-  },
-  {
-    label: "GIRP Notes",
-    value: "girp",
-    fields: [
-      { key: "goal", label: "Goal", description: "Client's treatment goals addressed" },
-      { key: "intervention", label: "Intervention", description: "Interventions aimed at goals" },
-      { key: "response", label: "Response", description: "Client's response in relation to goals" },
-      { key: "plan", label: "Plan", description: "Continued work on goals" },
-    ],
-  },
-];
 
 interface NoteEditorProps {
   onSave: (noteData: { template: string; content: Record<string, string> }) => void;
   onCancel: () => void;
   initialData?: { template: string; content: Record<string, string> };
+  availableTemplates?: Template[];
 }
 
-export function NoteEditor({ onSave, onCancel, initialData }: NoteEditorProps) {
-  const [template, setTemplate] = useState<string>(initialData?.template || "free");
+export function NoteEditor({ onSave, onCancel, initialData, availableTemplates = [] }: NoteEditorProps) {
+  // Filter to only show enabled templates
+  const enabledTemplates = availableTemplates.filter(template => template.isEnabled);
+  
+  const [template, setTemplate] = useState<string>(initialData?.template || (enabledTemplates[0]?.value || "free"));
   const [fields, setFields] = useState<Record<string, string>>(initialData?.content || { content: "" });
   const [error, setError] = useState<string | null>(null);
 
@@ -86,7 +35,7 @@ export function NoteEditor({ onSave, onCancel, initialData }: NoteEditorProps) {
   const handleTemplateChange = (value: string) => {
     setTemplate(value);
     setError(null);
-    const tmpl = predefinedTemplates.find((t) => t.value === value);
+    const tmpl = enabledTemplates.find((t) => t.value === value);
     if (tmpl) {
       const init: Record<string, string> = {};
       tmpl.fields.forEach((f) => (init[f.key] = ""));
@@ -110,7 +59,7 @@ export function NoteEditor({ onSave, onCancel, initialData }: NoteEditorProps) {
   };
 
   // Get current template fields
-  const currentTemplate = predefinedTemplates.find((t) => t.value === template);
+  const currentTemplate = enabledTemplates.find((t) => t.value === template);
   const fieldDefs = currentTemplate?.fields || [];
 
   return (
@@ -126,7 +75,7 @@ export function NoteEditor({ onSave, onCancel, initialData }: NoteEditorProps) {
               <SelectValue placeholder="Select a template" />
             </SelectTrigger>
             <SelectContent>
-              {predefinedTemplates.map((t) => (
+              {enabledTemplates.map((t) => (
                 <SelectItem key={t.value} value={t.value}>
                   {t.label}
                 </SelectItem>
