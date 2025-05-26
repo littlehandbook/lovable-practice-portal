@@ -27,6 +27,13 @@ export function NoteEditor({ onSave, onCancel, initialData }: NoteEditorProps) {
   const [sessionDate, setSessionDate] = useState<Date>(new Date());
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  // Debug logging
+  useEffect(() => {
+    console.log('NoteEditor - Enabled templates:', enabledTemplates);
+    console.log('NoteEditor - Loading:', loading);
+    console.log('NoteEditor - Error:', error);
+  }, [enabledTemplates, loading, error]);
+
   // Initialize form when templates load or initial data changes
   useEffect(() => {
     if (loading) return;
@@ -35,9 +42,10 @@ export function NoteEditor({ onSave, onCancel, initialData }: NoteEditorProps) {
       setTemplate(initialData.template || '');
       setFields(initialData.content || {});
       setSessionDate(initialData.sessionDate || new Date());
-    } else {
+    } else if (enabledTemplates.length > 0) {
       // Set default template to first enabled template
       const defaultTemplate = enabledTemplates[0]?.value || '';
+      console.log('Setting default template:', defaultTemplate);
       setTemplate(defaultTemplate);
       
       if (defaultTemplate) {
@@ -53,6 +61,7 @@ export function NoteEditor({ onSave, onCancel, initialData }: NoteEditorProps) {
 
   // Initialize fields when template changes
   const handleTemplateChange = (value: string) => {
+    console.log('Template changed to:', value);
     setTemplate(value);
     setValidationError(null);
     const tmpl = enabledTemplates.find((t) => t.value === value);
@@ -60,6 +69,7 @@ export function NoteEditor({ onSave, onCancel, initialData }: NoteEditorProps) {
       const init: Record<string, string> = {};
       tmpl.fields.forEach((f) => (init[f.key] = ""));
       setFields(init);
+      console.log('Fields initialized for template:', tmpl.label, init);
     }
   };
 
@@ -162,12 +172,16 @@ export function NoteEditor({ onSave, onCancel, initialData }: NoteEditorProps) {
               </SelectTrigger>
               <SelectContent>
                 {enabledTemplates.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>
+                  <SelectItem key={t.id} value={t.value}>
                     {t.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {/* Debug info */}
+            <div className="text-xs text-gray-500">
+              Current: {template}, Available: {enabledTemplates.length}
+            </div>
           </div>
 
           <div className="space-y-2">

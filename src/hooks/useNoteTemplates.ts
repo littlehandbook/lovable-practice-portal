@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 
 // Define the structure of a template
@@ -87,7 +88,6 @@ const defaultTemplates: Template[] = [
 ];
 
 const STORAGE_KEY = 'noteTemplates';
-const STORAGE_LISTENERS_KEY = 'templateStorageListeners';
 
 // Create a simple event system for cross-component communication
 const createStorageEventSystem = () => {
@@ -121,18 +121,25 @@ export const useNoteTemplates = () => {
       setError(null);
       
       const savedTemplates = localStorage.getItem(STORAGE_KEY);
+      console.log('Loading templates from localStorage:', savedTemplates);
+      
       if (savedTemplates) {
         const parsed = JSON.parse(savedTemplates);
+        console.log('Parsed templates:', parsed);
+        
         // Validate the parsed data structure
         if (Array.isArray(parsed) && parsed.every(t => t.id && t.label && t.fields)) {
           setTemplates(parsed);
+          console.log('Templates loaded successfully:', parsed.length);
         } else {
           throw new Error('Invalid template data structure');
         }
       } else {
         // Initialize with default templates
+        console.log('No saved templates found, initializing with defaults');
         setTemplates(defaultTemplates);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultTemplates));
+        console.log('Default templates saved to localStorage');
       }
     } catch (error) {
       console.error('Error loading templates:', error);
@@ -146,11 +153,13 @@ export const useNoteTemplates = () => {
   // Save templates to localStorage and notify other components
   const updateTemplates = useCallback((newTemplates: Template[]) => {
     try {
+      console.log('Updating templates:', newTemplates);
       setTemplates(newTemplates);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(newTemplates));
       // Notify other components that templates have changed
       templateStorageEvents.notify();
       setError(null);
+      console.log('Templates updated successfully');
     } catch (error) {
       console.error('Error saving templates:', error);
       setError('Failed to save templates');
@@ -165,6 +174,7 @@ export const useNoteTemplates = () => {
   // Listen for changes from other components (like settings)
   useEffect(() => {
     const unsubscribe = templateStorageEvents.subscribe(() => {
+      console.log('Received template change notification, reloading...');
       loadTemplates();
     });
     return unsubscribe;
@@ -172,6 +182,13 @@ export const useNoteTemplates = () => {
 
   // Get only enabled templates
   const enabledTemplates = templates.filter(template => template.isEnabled);
+  
+  console.log('useNoteTemplates hook state:', {
+    totalTemplates: templates.length,
+    enabledTemplates: enabledTemplates.length,
+    loading,
+    error
+  });
 
   // Get template by ID
   const getTemplateById = useCallback((id: string) => {
