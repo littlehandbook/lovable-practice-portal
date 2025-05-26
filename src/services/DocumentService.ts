@@ -46,8 +46,9 @@ export class DocumentService {
           mime_type: file.type,
           document_type: documentType,
           client_id: clientId,
-          uploaded_by: user.id,
+          therapist_id: user.id,
           tenant_id: tenantId,
+          uploaded_by: user.id,
           is_shared_with_client: documentType === 'client_upload'
         })
         .select()
