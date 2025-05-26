@@ -1,192 +1,213 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layouts/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, MoreHorizontal, User } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { AddClientDialog } from '@/components/AddClientDialog';
-import { ClientService } from '@/services/ClientService';
-import { Client } from '@/models';
-import { useToast } from '@/hooks/use-toast';
+import { Users, Search, Plus, Mail, Phone, Calendar } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useBranding } from '@/hooks/useBranding';
 
 const ClientsPage = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
-
-  const fetchClients = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await ClientService.getClients();
-      
-      if (error) {
-        console.error('Error fetching clients:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load clients',
-          variant: 'destructive'
-        });
-        return;
-      }
-
-      setClients(data);
-    } catch (error) {
-      console.error('Unexpected error fetching clients:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load clients',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showAddDialog, setShowAddDialog] = useState(false);
+  const { branding } = useBranding();
+  
+  // Apply branding colors to CSS variables
   useEffect(() => {
-    fetchClients();
-  }, []);
+    if (branding.primary_color && branding.secondary_color) {
+      document.documentElement.style.setProperty('--primary-color', branding.primary_color);
+      document.documentElement.style.setProperty('--secondary-color', branding.secondary_color);
+    }
+  }, [branding.primary_color, branding.secondary_color]);
+
+  const primaryColor = branding.primary_color || '#0f766e';
+  const secondaryColor = branding.secondary_color || '#14b8a6';
+
+  // Mock client data
+  const clients = [
+    {
+      id: '1',
+      name: 'Sarah Johnson',
+      email: 'sarah.johnson@email.com',
+      phone: '(555) 123-4567',
+      status: 'Active',
+      lastSession: '2024-01-15',
+      nextSession: '2024-01-22',
+      totalSessions: 12
+    },
+    {
+      id: '2',
+      name: 'Michael Chen',
+      email: 'michael.chen@email.com',
+      phone: '(555) 234-5678',
+      status: 'Active',
+      lastSession: '2024-01-14',
+      nextSession: '2024-01-21',
+      totalSessions: 8
+    },
+    {
+      id: '3',
+      name: 'Emma Wilson',
+      email: 'emma.wilson@email.com',
+      phone: '(555) 345-6789',
+      status: 'Inactive',
+      lastSession: '2023-12-20',
+      nextSession: null,
+      totalSessions: 15
+    }
+  ];
 
   const filteredClients = clients.filter(client =>
-    client.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    (client.email && client.email.toLowerCase().includes(searchQuery.toLowerCase()))
+    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    client.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleClientAdded = () => {
-    // Refresh the client list after a new client is added
-    fetchClients();
-    toast({
-      title: 'Success',
-      description: 'Client added successfully'
-    });
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
+  const getStatusColor = (status: string) => {
+    return status === 'Active' ? secondaryColor : '#6b7280';
   };
 
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-2xl font-bold tracking-tight">Clients</h1>
-          <AddClientDialog onClientAdded={handleClientAdded} />
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight" style={{ color: primaryColor }}>
+              Clients
+            </h1>
+            <p className="text-gray-500">Manage your client list and their information</p>
+          </div>
+          <Button 
+            onClick={() => setShowAddDialog(true)}
+            style={{ 
+              backgroundColor: primaryColor,
+              color: 'white'
+            }}
+            className="hover:opacity-90"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Client
+          </Button>
         </div>
-        
+
+        {/* Search and Filters */}
         <Card>
-          <CardHeader>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <CardTitle>Client List</CardTitle>
-              <div className="relative w-full sm:w-auto">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  type="search"
-                  placeholder="Search clients..."
-                  className="pl-8 w-full sm:w-[250px]"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search clients by name or email..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
                 />
               </div>
+              <div className="flex items-center space-x-2">
+                <Badge variant="outline" style={{ borderColor: primaryColor, color: primaryColor }}>
+                  <Users className="h-3 w-3 mr-1" />
+                  {filteredClients.length} clients
+                </Badge>
+              </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="text-center py-8">
-                <p className="text-gray-500">Loading clients...</p>
-              </div>
-            ) : (
-              <div className="rounded-md border overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Name
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Email
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Phone
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Created
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {filteredClients.length > 0 ? (
-                        filteredClients.map((client) => (
-                          <tr key={client.id} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <div className="flex-shrink-0 h-8 w-8">
-                                  <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-                                    <User className="h-4 w-4 text-gray-500" />
-                                  </div>
-                                </div>
-                                <div className="ml-4">
-                                  <Link 
-                                    to={`/practice/clients/${client.id}`} 
-                                    className="text-sm font-medium text-teal-700 hover:underline"
-                                  >
-                                    {client.name}
-                                  </Link>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {client.email || 'Not provided'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {client.phone || 'Not provided'}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                Active
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {formatDate(client.created_at)}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              <button className="text-gray-500 hover:text-gray-700">
-                                <MoreHorizontal className="h-5 w-5" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td colSpan={6} className="px-6 py-8 text-center">
-                            <div className="text-gray-500">
-                              <User className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-                              {searchQuery ? (
-                                <p>No clients found matching "{searchQuery}"</p>
-                              ) : (
-                                <div>
-                                  <p className="text-lg font-medium">No clients yet</p>
-                                  <p className="text-sm mt-1">Get started by adding your first client</p>
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
+
+        {/* Clients Grid */}
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {filteredClients.map((client) => (
+            <Card key={client.id} className="hover:shadow-md transition-shadow">
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <CardTitle className="text-lg" style={{ color: primaryColor }}>
+                    {client.name}
+                  </CardTitle>
+                  <Badge 
+                    variant={client.status === 'Active' ? 'default' : 'secondary'}
+                    style={{ 
+                      backgroundColor: client.status === 'Active' ? secondaryColor : '#6b7280',
+                      color: 'white'
+                    }}
+                  >
+                    {client.status}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <Mail className="h-4 w-4 mr-2" style={{ color: primaryColor }} />
+                    {client.email}
+                  </div>
+                  <div className="flex items-center text-sm text-gray-600">
+                    <Phone className="h-4 w-4 mr-2" style={{ color: primaryColor }} />
+                    {client.phone}
+                  </div>
+                  <div className="flex items-center text-sm text-gray-600">
+                    <Calendar className="h-4 w-4 mr-2" style={{ color: secondaryColor }} />
+                    {client.totalSessions} sessions
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t">
+                  <div className="text-xs text-gray-500 mb-2">
+                    Last session: {client.lastSession}
+                  </div>
+                  {client.nextSession && (
+                    <div className="text-xs text-gray-500 mb-3">
+                      Next session: {client.nextSession}
+                    </div>
+                  )}
+                  <Link to={`/practice/clients/${client.id}`}>
+                    <Button 
+                      size="sm" 
+                      className="w-full"
+                      style={{ 
+                        backgroundColor: primaryColor,
+                        color: 'white'
+                      }}
+                      className="hover:opacity-90"
+                    >
+                      View Details
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {filteredClients.length === 0 && (
+          <Card>
+            <CardContent className="text-center py-12">
+              <Users className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+              <h3 className="text-lg font-medium text-gray-500 mb-2">No clients found</h3>
+              <p className="text-gray-400 mb-4">
+                {searchTerm ? 'Try adjusting your search criteria' : 'Start by adding your first client'}
+              </p>
+              {!searchTerm && (
+                <Button 
+                  onClick={() => setShowAddDialog(true)}
+                  style={{ 
+                    backgroundColor: primaryColor,
+                    color: 'white'
+                  }}
+                  className="hover:opacity-90"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Your First Client
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        <AddClientDialog 
+          open={showAddDialog} 
+          onOpenChange={setShowAddDialog}
+        />
       </div>
     </DashboardLayout>
   );
