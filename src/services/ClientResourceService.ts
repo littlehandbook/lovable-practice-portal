@@ -10,9 +10,12 @@ export class ClientResourceService {
         return { data: null, error: 'User not authenticated' };
       }
 
-      const tenantId = user.user_metadata?.tenant_id;
+      // Get tenant_id from JWT claims instead of user metadata
+      const { data: { session } } = await supabase.auth.getSession();
+      const tenantId = session?.user?.user_metadata?.tenant_id || user.id; // Fallback to user.id if no tenant_id
+      
       if (!tenantId) {
-        return { data: null, error: 'Tenant ID not found in user metadata' };
+        return { data: null, error: 'Tenant ID not found' };
       }
 
       let file_path = null;
