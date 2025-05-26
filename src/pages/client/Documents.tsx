@@ -1,14 +1,15 @@
-
 import React, { useState, useEffect } from 'react';
 import { ClientLayout } from '@/components/layouts/ClientLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DocumentService } from '@/services/DocumentService';
-import { DocumentRecord } from '@/models';
+import { ClientResourceService } from '@/services/ClientResourceService';
+import { DocumentRecord, ClientResource } from '@/models';
 import { useToast } from '@/hooks/use-toast';
 import { UploadSection } from '@/components/client/UploadSection';
 import { UploadProgress } from '@/components/client/UploadProgress';
 import { SessionNotesTab } from '@/components/client/SessionNotesTab';
 import { DocumentsTab } from '@/components/client/DocumentsTab';
+import { ResourcesTab } from '@/components/client/ResourcesTab';
 
 const ClientDocumentsPage = () => {
   const [activeTab, setActiveTab] = useState('notes');
@@ -16,11 +17,13 @@ const ClientDocumentsPage = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
   const [sessionNotes, setSessionNotes] = useState<DocumentRecord[]>([]);
+  const [resources, setResources] = useState<ClientResource[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   
   useEffect(() => {
     loadDocuments();
+    loadResources();
   }, []);
 
   const loadDocuments = async () => {
@@ -48,6 +51,23 @@ const ClientDocumentsPage = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadResources = async () => {
+    try {
+      // For now, we'll use a mock client ID since we don't have client auth implemented yet
+      // In production, this would come from the authenticated client's JWT
+      const mockClientId = 'client-123'; // This should be replaced with actual client ID from auth
+      
+      const { data, error } = await ClientResourceService.getClientResources(mockClientId);
+      if (error) {
+        console.error('Failed to load resources:', error);
+      } else {
+        setResources(data);
+      }
+    } catch (error: any) {
+      console.error('Error loading resources:', error);
     }
   };
 
@@ -149,6 +169,39 @@ const ClientDocumentsPage = () => {
     }
   };
 
+  const handleResourceDownload = async (resource: ClientResource) => {
+    if (!resource.file_path) return;
+
+    try {
+      const { data, error } = await ClientResourceService.downloadResource(resource.file_path);
+      if (error) {
+        toast({
+          title: "Download failed",
+          description: error,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data) {
+        const url = URL.createObjectURL(data);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = resource.title;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        URL.revokeObjectURL(url);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Download failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return 'Unknown size';
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -177,6 +230,7 @@ const ClientDocumentsPage = () => {
           <TabsList>
             <TabsTrigger value="notes">Session Notes</TabsTrigger>
             <TabsTrigger value="documents">My Documents</TabsTrigger>
+            <TabsTrigger value="resources">Learning Resources</TabsTrigger>
           </TabsList>
           
           <TabsContent value="notes">
@@ -189,6 +243,13 @@ const ClientDocumentsPage = () => {
               formatFileSize={formatFileSize} 
               onDownload={handleDownload} 
               onFileChange={handleFileChange} 
+            />
+          </TabsContent>
+          
+          <TabsContent value="resources">
+            <ResourcesTab 
+              resources={resources} 
+              onDownload={handleResourceDownload} 
             />
           </TabsContent>
         </Tabs>

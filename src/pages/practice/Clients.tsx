@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Search, MoreHorizontal } from 'lucide-react';
 import { AddClientDialog } from '@/components/AddClientDialog';
+import { ClientResourcesList } from '@/components/practice/ClientResourcesList';
 
 const ClientsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');

@@ -1,4 +1,3 @@
-
 // Centralized model definitions
 // TODO: These should eventually be replaced with auto-generated Supabase types
 
@@ -68,3 +67,6 @@ export class ServiceError extends Error {
     this.name = 'ServiceError';
   }
 }
+
+// Add ClientResource export
+export * from './ClientResource';

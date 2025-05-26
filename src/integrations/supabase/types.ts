@@ -253,6 +253,68 @@ export type Database = {
           },
         ]
       }
+      tbl_client_resources: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          created_by: string
+          description: string | null
+          file_path: string | null
+          file_size: number | null
+          id: string
+          is_active: boolean
+          mime_type: string | null
+          resource_type: string
+          tenant_id: string
+          title: string
+          updated_at: string | null
+          updated_by: string
+          url: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          is_active?: boolean
+          mime_type?: string | null
+          resource_type: string
+          tenant_id: string
+          title: string
+          updated_at?: string | null
+          updated_by: string
+          url?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          is_active?: boolean
+          mime_type?: string | null
+          resource_type?: string
+          tenant_id?: string
+          title?: string
+          updated_at?: string | null
+          updated_by?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_resources_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tbl_tenant_registry"
+            referencedColumns: ["tenant_id"]
+          },
+        ]
+      }
       tbl_config_audit: {
         Row: {
           audit_id: string
