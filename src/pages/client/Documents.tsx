@@ -1,33 +1,46 @@
+
 import React, { useState, useEffect } from 'react';
 import { ClientLayout } from '@/components/layouts/ClientLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DocumentService } from '@/services/DocumentService';
 import { ClientResourceService } from '@/services/ClientResourceService';
+import { ClientJournalService, ClientJournalEntry } from '@/services/ClientJournalService';
 import { DocumentRecord, ClientResource } from '@/models';
 import { useToast } from '@/hooks/use-toast';
 import { UploadSection } from '@/components/client/UploadSection';
 import { UploadProgress } from '@/components/client/UploadProgress';
-import { SessionNotesTab } from '@/components/client/SessionNotesTab';
 import { DocumentsTab } from '@/components/client/DocumentsTab';
 import { ResourcesTab } from '@/components/client/ResourcesTab';
+import { JournalTab } from '@/components/client/JournalTab';
 
 const ClientDocumentsPage = () => {
-  const [activeTab, setActiveTab] = useState('notes');
+  const [activeTab, setActiveTab] = useState('journal');
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [documents, setDocuments] = useState<DocumentRecord[]>([]);
-  const [sessionNotes, setSessionNotes] = useState<DocumentRecord[]>([]);
   const [resources, setResources] = useState<ClientResource[]>([]);
+  const [journalEntries, setJournalEntries] = useState<ClientJournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   
   useEffect(() => {
-    loadDocuments();
-    loadResources();
+    loadData();
   }, []);
 
-  const loadDocuments = async () => {
+  const loadData = async () => {
     setLoading(true);
+    try {
+      await Promise.all([
+        loadDocuments(),
+        loadResources(),
+        loadJournalEntries()
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadDocuments = async () => {
     try {
       const { data, error } = await DocumentService.getClientDocuments();
       if (error) {
@@ -37,11 +50,8 @@ const ClientDocumentsPage = () => {
           variant: "destructive"
         });
       } else {
-        // Separate client uploads from session notes
         const clientDocs = data.filter(doc => doc.document_type === 'client_upload');
-        const notes = data.filter(doc => doc.document_type === 'session_notes' && doc.is_shared_with_client);
         setDocuments(clientDocs);
-        setSessionNotes(notes);
       }
     } catch (error: any) {
       toast({
@@ -49,17 +59,12 @@ const ClientDocumentsPage = () => {
         description: "Failed to load documents",
         variant: "destructive"
       });
-    } finally {
-      setLoading(false);
     }
   };
 
   const loadResources = async () => {
     try {
-      // For now, we'll use a mock client ID since we don't have client auth implemented yet
-      // In production, this would come from the authenticated client's JWT
-      const mockClientId = 'client-123'; // This should be replaced with actual client ID from auth
-      
+      const mockClientId = 'client-123';
       const { data, error } = await ClientResourceService.getClientResources(mockClientId);
       if (error) {
         console.error('Failed to load resources:', error);
@@ -68,6 +73,19 @@ const ClientDocumentsPage = () => {
       }
     } catch (error: any) {
       console.error('Error loading resources:', error);
+    }
+  };
+
+  const loadJournalEntries = async () => {
+    try {
+      const { data, error } = await ClientJournalService.getClientJournalEntries();
+      if (error) {
+        console.error('Failed to load journal entries:', error);
+      } else {
+        setJournalEntries(data);
+      }
+    } catch (error: any) {
+      console.error('Error loading journal entries:', error);
     }
   };
 
@@ -86,6 +104,8 @@ const ClientDocumentsPage = () => {
       }
 
       await uploadDocument(file);
+      // Reset the file input
+      e.target.value = '';
     }
   };
 
@@ -105,7 +125,8 @@ const ClientDocumentsPage = () => {
         });
       }, 100);
 
-      const { data, error } = await DocumentService.uploadDocument(file);
+      // Upload document without client_id so it appears on practitioner portal
+      const { data, error } = await DocumentService.uploadDocument(file, undefined, 'client_upload');
       
       clearInterval(progressInterval);
       setUploadProgress(100);
@@ -121,7 +142,6 @@ const ClientDocumentsPage = () => {
           title: "Upload successful",
           description: `${file.name} has been uploaded successfully`,
         });
-        // Refresh documents list
         await loadDocuments();
       }
     } catch (error: any) {
@@ -202,6 +222,57 @@ const ClientDocumentsPage = () => {
     }
   };
 
+  const handleCreateJournalEntry = async (data: { title: string; content: string; session_date?: string; is_shared_with_practitioner?: boolean }) => {
+    const { error } = await ClientJournalService.createJournalEntry(data);
+    if (error) {
+      toast({
+        title: "Error",
+        description: error,
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Journal entry created successfully"
+      });
+      await loadJournalEntries();
+    }
+  };
+
+  const handleUpdateJournalEntry = async (data: { id: string; title?: string; content?: string; session_date?: string; is_shared_with_practitioner?: boolean }) => {
+    const { error } = await ClientJournalService.updateJournalEntry(data);
+    if (error) {
+      toast({
+        title: "Error",
+        description: error,
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Journal entry updated successfully"
+      });
+      await loadJournalEntries();
+    }
+  };
+
+  const handleDeleteJournalEntry = async (entryId: string) => {
+    const { error } = await ClientJournalService.deleteJournalEntry(entryId);
+    if (error) {
+      toast({
+        title: "Error",
+        description: error,
+        variant: "destructive"
+      });
+    } else {
+      toast({
+        title: "Success",
+        description: "Journal entry deleted successfully"
+      });
+      await loadJournalEntries();
+    }
+  };
+
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return 'Unknown size';
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
@@ -228,13 +299,19 @@ const ClientDocumentsPage = () => {
         
         <Tabs defaultValue={activeTab} value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="notes">Session Notes</TabsTrigger>
+            <TabsTrigger value="journal">Journal</TabsTrigger>
             <TabsTrigger value="documents">My Documents</TabsTrigger>
             <TabsTrigger value="resources">Learning Resources</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="notes">
-            <SessionNotesTab sessionNotes={sessionNotes} onDownload={handleDownload} />
+          <TabsContent value="journal">
+            <JournalTab
+              journalEntries={journalEntries}
+              onCreateEntry={handleCreateJournalEntry}
+              onUpdateEntry={handleUpdateJournalEntry}
+              onDeleteEntry={handleDeleteJournalEntry}
+              loading={loading}
+            />
           </TabsContent>
           
           <TabsContent value="documents">

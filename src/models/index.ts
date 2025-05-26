@@ -70,3 +70,6 @@ export class ServiceError extends Error {
 
 // Add ClientResource export
 export * from './ClientResource';
+
+// Add ClientJournalEntry export
+export type { ClientJournalEntry, CreateJournalEntryInput, UpdateJournalEntryInput } from '../services/ClientJournalService';
