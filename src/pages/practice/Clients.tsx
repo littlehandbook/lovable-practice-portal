@@ -9,11 +9,17 @@ import { AddClientDialog } from '@/components/AddClientDialog';
 import { Users, Search, Plus, Mail, Phone, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useBranding } from '@/hooks/useBranding';
+import { ClientService } from '@/services/ClientService';
+import { Client } from '@/models';
+import { useToast } from '@/hooks/use-toast';
 
 const ClientsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [loading, setLoading] = useState(true);
   const { branding } = useBranding();
+  const { toast } = useToast();
   
   // Apply branding colors to CSS variables
   useEffect(() => {
@@ -26,48 +32,62 @@ const ClientsPage = () => {
   const primaryColor = branding.primary_color || '#0f766e';
   const secondaryColor = branding.secondary_color || '#14b8a6';
 
-  // Mock client data
-  const clients = [
-    {
-      id: '1',
-      name: 'Sarah Johnson',
-      email: 'sarah.johnson@email.com',
-      phone: '(555) 123-4567',
-      status: 'Active',
-      lastSession: '2024-01-15',
-      nextSession: '2024-01-22',
-      totalSessions: 12
-    },
-    {
-      id: '2',
-      name: 'Michael Chen',
-      email: 'michael.chen@email.com',
-      phone: '(555) 234-5678',
-      status: 'Active',
-      lastSession: '2024-01-14',
-      nextSession: '2024-01-21',
-      totalSessions: 8
-    },
-    {
-      id: '3',
-      name: 'Emma Wilson',
-      email: 'emma.wilson@email.com',
-      phone: '(555) 345-6789',
-      status: 'Inactive',
-      lastSession: '2023-12-20',
-      nextSession: null,
-      totalSessions: 15
+  // Load clients from the database
+  const loadClients = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await ClientService.getClients();
+      if (error) {
+        toast({
+          title: 'Error',
+          description: 'Failed to load clients',
+          variant: 'destructive'
+        });
+        setClients([]);
+      } else {
+        setClients(data);
+      }
+    } catch (error: any) {
+      console.error('Error loading clients:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load clients',
+        variant: 'destructive'
+      });
+      setClients([]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  // Load clients on component mount
+  useEffect(() => {
+    loadClients();
+  }, []);
 
   const filteredClients = clients.filter(client =>
     client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    client.email.toLowerCase().includes(searchTerm.toLowerCase())
+    (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const getStatusColor = (status: string) => {
     return status === 'Active' ? secondaryColor : '#6b7280';
   };
+
+  const handleClientAdded = () => {
+    // Refresh the client list when a new client is added
+    loadClients();
+  };
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -125,41 +145,37 @@ const ClientsPage = () => {
                     {client.name}
                   </CardTitle>
                   <Badge 
-                    variant={client.status === 'Active' ? 'default' : 'secondary'}
+                    variant="default"
                     style={{ 
-                      backgroundColor: client.status === 'Active' ? secondaryColor : '#6b7280',
+                      backgroundColor: secondaryColor,
                       color: 'white'
                     }}
                   >
-                    {client.status}
+                    Active
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Mail className="h-4 w-4 mr-2" style={{ color: primaryColor }} />
-                    {client.email}
-                  </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Phone className="h-4 w-4 mr-2" style={{ color: primaryColor }} />
-                    {client.phone}
-                  </div>
+                  {client.email && (
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Mail className="h-4 w-4 mr-2" style={{ color: primaryColor }} />
+                      {client.email}
+                    </div>
+                  )}
+                  {client.phone && (
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Phone className="h-4 w-4 mr-2" style={{ color: primaryColor }} />
+                      {client.phone}
+                    </div>
+                  )}
                   <div className="flex items-center text-sm text-gray-600">
                     <Calendar className="h-4 w-4 mr-2" style={{ color: secondaryColor }} />
-                    {client.totalSessions} sessions
+                    Added {new Date(client.created_at).toLocaleDateString()}
                   </div>
                 </div>
 
                 <div className="pt-4 border-t">
-                  <div className="text-xs text-gray-500 mb-2">
-                    Last session: {client.lastSession}
-                  </div>
-                  {client.nextSession && (
-                    <div className="text-xs text-gray-500 mb-3">
-                      Next session: {client.nextSession}
-                    </div>
-                  )}
                   <Link to={`/practice/clients/${client.id}`}>
                     <Button 
                       size="sm" 
@@ -178,7 +194,7 @@ const ClientsPage = () => {
           ))}
         </div>
 
-        {filteredClients.length === 0 && (
+        {filteredClients.length === 0 && !loading && (
           <Card>
             <CardContent className="text-center py-12">
               <Users className="h-12 w-12 mx-auto text-gray-300 mb-4" />
@@ -206,10 +222,7 @@ const ClientsPage = () => {
         <AddClientDialog 
           open={showAddDialog} 
           onOpenChange={setShowAddDialog}
-          onClientAdded={() => {
-            // Refresh the client list when a new client is added
-            // This could trigger a re-fetch in a real implementation
-          }}
+          onClientAdded={handleClientAdded}
         />
       </div>
     </DashboardLayout>

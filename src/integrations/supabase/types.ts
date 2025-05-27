@@ -845,15 +845,6 @@ export type Database = {
         Args: { p_practice_name: string }
         Returns: string
       }
-      sp_get_branding: {
-        Args: { p_tenant_id: string }
-        Returns: {
-          logo_url: string
-          primary_color: string
-          secondary_color: string
-          practice_name: string
-        }[]
-      }
       sp_get_client_goals: {
         Args: { p_client_id: string; p_tenant_id: string }
         Returns: {
@@ -938,17 +929,6 @@ export type Database = {
           p_tenant_id: string
           p_page_id: string
           p_allowed_roles: string[]
-          p_user_id: string
-        }
-        Returns: undefined
-      }
-      sp_upsert_branding: {
-        Args: {
-          p_tenant_id: string
-          p_logo_url: string
-          p_primary_color: string
-          p_secondary_color: string
-          p_practice_name: string
           p_user_id: string
         }
         Returns: undefined
