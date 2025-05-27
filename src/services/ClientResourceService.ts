@@ -10,17 +10,9 @@ export class ClientResourceService {
         return { data: null, error: 'User not authenticated' };
       }
 
-      // Get tenant_id from JWT claims
-      const { data: { session } } = await supabase.auth.getSession();
-      const tenantId = session?.user?.user_metadata?.tenant_id || user.user_metadata?.tenant_id;
-      
       // Validate required UUIDs
       if (!isUUID(user.id)) {
         return { data: null, error: 'Invalid user ID format' };
-      }
-
-      if (tenantId && !isUUID(tenantId)) {
-        return { data: null, error: 'Invalid tenant ID format' };
       }
 
       if (!isUUID(input.client_id)) {
@@ -34,10 +26,8 @@ export class ClientResourceService {
       // Handle file upload for document type
       if (input.resource_type === 'document' && input.file) {
         const fileExt = input.file.name.split('.').pop();
-        // Use tenant-isolated file structure: tenant_id/user_id/filename (if tenant exists)
-        const fileName = tenantId 
-          ? `${tenantId}/${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
-          : `${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        // Use simple file structure since tenant isolation is handled by RLS
+        const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
 
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('documents')
@@ -53,7 +43,7 @@ export class ClientResourceService {
         mime_type = input.file.type;
       }
 
-      // Insert resource record - triggers will automatically set created_by and updated_by
+      // Insert resource record - triggers will automatically set created_by, updated_by, and tenant_id
       const insertData: any = {
         client_id: input.client_id,
         resource_type: input.resource_type,
@@ -64,13 +54,8 @@ export class ClientResourceService {
         file_size: input.resource_type === 'document' ? file_size : null,
         mime_type: input.resource_type === 'document' ? mime_type : null,
         is_active: true
-        // Note: created_by and updated_by are now set automatically by database triggers
+        // Note: created_by, updated_by, and tenant_id are now set automatically by database triggers
       };
-
-      // Only include tenant_id if it's a valid UUID
-      if (tenantId && isUUID(tenantId)) {
-        insertData.tenant_id = tenantId;
-      }
 
       const { data, error } = await supabase
         .from('tbl_client_resources' as any)
