@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { ClientResource, CreateResourceInput } from '@/models/ClientResource';
 import { isUUID } from '@/lib/utils';
@@ -54,7 +53,7 @@ export class ClientResourceService {
         mime_type = input.file.type;
       }
 
-      // Insert resource record with proper user fields for RLS
+      // Insert resource record - triggers will automatically set created_by and updated_by
       const insertData: any = {
         client_id: input.client_id,
         resource_type: input.resource_type,
@@ -64,9 +63,8 @@ export class ClientResourceService {
         file_path: input.resource_type === 'document' ? file_path : null,
         file_size: input.resource_type === 'document' ? file_size : null,
         mime_type: input.resource_type === 'document' ? mime_type : null,
-        is_active: true,
-        created_by: user.id, // Ensure this matches auth.uid()
-        updated_by: user.id  // Ensure this matches auth.uid()
+        is_active: true
+        // Note: created_by and updated_by are now set automatically by database triggers
       };
 
       // Only include tenant_id if it's a valid UUID
