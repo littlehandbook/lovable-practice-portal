@@ -80,6 +80,19 @@ const Calendar = () => {
     );
   };
 
+  const getSessionTime = (sessionDate: string) => {
+    try {
+      const date = new Date(sessionDate);
+      return date.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+      });
+    } catch (error) {
+      return 'Time TBD';
+    }
+  };
+
   const navigateMonth = (direction: 'prev' | 'next') => {
     setCurrentDate(prev => {
       const newDate = new Date(prev);
@@ -219,9 +232,9 @@ const Calendar = () => {
                         <div
                           key={sessionIndex}
                           className={`text-xs p-1 rounded text-white truncate ${getSessionStatusColor(session.status)}`}
-                          title={`${session.session_time} - ${session.status}`}
+                          title={`${getSessionTime(session.session_date)} - ${session.status}`}
                         >
-                          {session.session_time}
+                          {getSessionTime(session.session_date)}
                         </div>
                       ))}
                       

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Session, SessionNote, ServiceError } from '@/models';
 
@@ -26,6 +25,29 @@ export class SessionService {
       return { data: sessions, error: null };
     } catch (error: any) {
       console.error('Unexpected error in getSessions:', error);
+      return { data: [], error: error.message };
+    }
+  }
+
+  static async getSessionsByDateRange(startDate: string, endDate: string): Promise<{ data: Session[]; error: string | null }> {
+    try {
+      const { data, error } = await supabase
+        .from('tbl_sessions' as any)
+        .select('*')
+        .gte('session_date', startDate)
+        .lte('session_date', endDate)
+        .order('session_date', { ascending: true });
+
+      if (error) {
+        console.error('Supabase error in getSessionsByDateRange:', error);
+        return { data: [], error: error.message };
+      }
+
+      // TODO: remove this cast when Supabase types are regenerated
+      const sessions = (data || []) as unknown as Session[];
+      return { data: sessions, error: null };
+    } catch (error: any) {
+      console.error('Unexpected error in getSessionsByDateRange:', error);
       return { data: [], error: error.message };
     }
   }
