@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { ClientResource, CreateResourceInput } from '@/models/ClientResource';
 import { isUUID } from '@/lib/utils';
@@ -51,8 +52,7 @@ export class ClientResourceService {
           console.error('Storage upload error:', uploadError);
           console.error('Upload error details:', {
             message: uploadError.message,
-            statusCode: uploadError.statusCode,
-            error: uploadError.error
+            name: uploadError.name
           });
           return { data: null, error: `File upload failed: ${uploadError.message}` };
         }
