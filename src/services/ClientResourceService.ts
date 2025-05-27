@@ -10,6 +10,9 @@ export class ClientResourceService {
         return { data: null, error: 'User not authenticated' };
       }
 
+      console.log('Creating resource for user:', user.id);
+      console.log('Input:', { ...input, file: input.file ? 'File object' : null });
+
       // Validate required UUIDs
       if (!isUUID(user.id)) {
         return { data: null, error: 'Invalid user ID format' };
@@ -25,9 +28,20 @@ export class ClientResourceService {
 
       // Handle file upload for document type
       if (input.resource_type === 'document' && input.file) {
+        console.log('Uploading file:', input.file.name, 'Size:', input.file.size);
+        
         const fileExt = input.file.name.split('.').pop();
         // Use simple file structure since tenant isolation is handled by RLS
         const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+
+        console.log('Upload path:', fileName);
+
+        // First, let's check if the bucket exists
+        const { data: buckets, error: bucketError } = await supabase.storage.listBuckets();
+        console.log('Available buckets:', buckets);
+        if (bucketError) {
+          console.error('Error listing buckets:', bucketError);
+        }
 
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('documents')
@@ -35,9 +49,15 @@ export class ClientResourceService {
 
         if (uploadError) {
           console.error('Storage upload error:', uploadError);
-          return { data: null, error: uploadError.message };
+          console.error('Upload error details:', {
+            message: uploadError.message,
+            statusCode: uploadError.statusCode,
+            error: uploadError.error
+          });
+          return { data: null, error: `File upload failed: ${uploadError.message}` };
         }
 
+        console.log('File uploaded successfully:', uploadData);
         file_path = uploadData.path;
         file_size = input.file.size;
         mime_type = input.file.type;
@@ -57,6 +77,8 @@ export class ClientResourceService {
         // Note: created_by, updated_by, and tenant_id are now set automatically by database triggers
       };
 
+      console.log('Inserting resource data:', insertData);
+
       const { data, error } = await supabase
         .from('tbl_client_resources' as any)
         .insert(insertData)
@@ -72,6 +94,7 @@ export class ClientResourceService {
         return { data: null, error: error.message };
       }
 
+      console.log('Resource created successfully:', data);
       return { data: data as unknown as ClientResource, error: null };
     } catch (error: any) {
       console.error('Unexpected error in createResource:', error);
