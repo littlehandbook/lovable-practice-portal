@@ -3,22 +3,20 @@ import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layouts/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, User } from 'lucide-react';
-import { useBranding } from '@/hooks/useBranding';
+import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { SessionService } from '@/services/SessionService';
 import { Session } from '@/models';
 import { useToast } from '@/hooks/use-toast';
+import { useBranding } from '@/hooks/useBranding';
 
-const CalendarPage = () => {
+const Calendar = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
-  const { branding } = useBranding();
   const { toast } = useToast();
+  const { branding } = useBranding();
 
   const primaryColor = branding.primary_color || '#0f766e';
-  const secondaryColor = branding.secondary_color || '#14b8a6';
 
   useEffect(() => {
     loadSessions();
@@ -27,14 +25,20 @@ const CalendarPage = () => {
   const loadSessions = async () => {
     setLoading(true);
     try {
-      const { data, error } = await SessionService.getSessions();
+      const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+      
+      const { data, error } = await SessionService.getSessionsByDateRange(
+        startOfMonth.toISOString().split('T')[0],
+        endOfMonth.toISOString().split('T')[0]
+      );
+
       if (error) {
         toast({
           title: 'Error',
           description: 'Failed to load sessions',
           variant: 'destructive'
         });
-        setSessions([]);
       } else {
         setSessions(data);
       }
@@ -45,40 +49,34 @@ const CalendarPage = () => {
         description: 'Failed to load sessions',
         variant: 'destructive'
       });
-      setSessions([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const getDaysInMonth = (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
+  const getDaysInMonth = () => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay();
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDay.getDay());
 
     const days = [];
-    
-    // Add empty cells for days before the first day of the month
-    for (let i = 0; i < startingDayOfWeek; i++) {
-      days.push(null);
+    const current = new Date(startDate);
+
+    for (let i = 0; i < 42; i++) {
+      days.push(new Date(current));
+      current.setDate(current.getDate() + 1);
     }
-    
-    // Add all days of the month
-    for (let day = 1; day <= daysInMonth; day++) {
-      days.push(new Date(year, month, day));
-    }
-    
+
     return days;
   };
 
-  const getSessionsForDay = (date: Date | null) => {
-    if (!date) return [];
-    const dateString = date.toISOString().split('T')[0];
+  const getSessionsForDate = (date: Date) => {
+    const dateStr = date.toISOString().split('T')[0];
     return sessions.filter(session => 
-      session.session_date.split('T')[0] === dateString
+      session.session_date?.split('T')[0] === dateStr
     );
   };
 
@@ -94,41 +92,45 @@ const CalendarPage = () => {
     });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'scheduled':
-        return 'bg-blue-100 text-blue-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      case 'no_show':
-        return 'bg-gray-100 text-gray-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
+  const formatMonthYear = (date: Date) => {
+    return date.toLocaleDateString('en-US', { 
+      month: 'long', 
+      year: 'numeric' 
     });
   };
 
-  const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
-  ];
+  const isToday = (date: Date) => {
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+  };
 
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const isCurrentMonth = (date: Date) => {
+    return date.getMonth() === currentDate.getMonth();
+  };
+
+  const getSessionStatusColor = (status: string) => {
+    switch (status) {
+      case 'confirmed':
+        return 'bg-green-500';
+      case 'pending':
+        return 'bg-yellow-500';
+      case 'cancelled':
+        return 'bg-red-500';
+      case 'completed':
+        return 'bg-blue-500';
+      default:
+        return 'bg-gray-500';
+    }
+  };
+
+  const days = getDaysInMonth();
+  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   if (loading) {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2" style={{ borderColor: primaryColor }}></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
         </div>
       </DashboardLayout>
     );
@@ -137,51 +139,45 @@ const CalendarPage = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight" style={{ color: primaryColor }}>
-              Calendar
-            </h1>
-            <p className="text-gray-500">Manage your schedule and appointments</p>
-          </div>
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold tracking-tight">Calendar</h1>
+          <Button 
+            className="flex items-center gap-2"
+            style={{ backgroundColor: primaryColor }}
+          >
+            <Plus className="h-4 w-4" />
+            New Session
+          </Button>
         </div>
 
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center" style={{ color: primaryColor }}>
-                <CalendarIcon className="h-5 w-5 mr-2" />
-                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigateMonth('prev')}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              
+              <CardTitle className="text-xl">
+                {formatMonthYear(currentDate)}
               </CardTitle>
-              <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigateMonth('prev')}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentDate(new Date())}
-                >
-                  Today
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigateMonth('next')}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigateMonth('next')}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           </CardHeader>
+          
           <CardContent>
-            <div className="grid grid-cols-7 gap-1">
-              {/* Day headers */}
-              {dayNames.map(day => (
+            <div className="grid grid-cols-7 gap-1 mb-4">
+              {weekDays.map(day => (
                 <div
                   key={day}
                   className="p-2 text-center text-sm font-medium text-gray-500 border-b"
@@ -189,57 +185,52 @@ const CalendarPage = () => {
                   {day}
                 </div>
               ))}
-              
-              {/* Calendar grid */}
-              {getDaysInMonth(currentDate).map((day, index) => {
-                const daySessions = getSessionsForDay(day);
-                const isToday = day && 
-                  day.toDateString() === new Date().toDateString();
-                
+            </div>
+
+            <div className="grid grid-cols-7 gap-1">
+              {days.map((day, index) => {
+                const daySessionsData = getSessionsForDate(day);
+                const isCurrentMonthDay = isCurrentMonth(day);
+                const isTodayDate = isToday(day);
+
                 return (
                   <div
                     key={index}
-                    className={`min-h-[120px] p-2 border border-gray-200 ${
-                      day ? 'bg-white hover:bg-gray-50' : 'bg-gray-50'
-                    } ${isToday ? 'ring-2' : ''}`}
-                    style={isToday ? { ringColor: primaryColor } : {}}
+                    className={`
+                      min-h-[120px] p-2 border border-gray-200 cursor-pointer transition-colors
+                      ${isCurrentMonthDay ? 'bg-white hover:bg-gray-50' : 'bg-gray-50 text-gray-400'}
+                      ${isTodayDate ? 'ring-2 ring-blue-500' : ''}
+                    `}
+                    style={isTodayDate ? { 
+                      borderColor: primaryColor,
+                      backgroundColor: `${primaryColor}08`
+                    } : {}}
                   >
-                    {day && (
-                      <>
-                        <div className={`text-sm font-medium mb-1 ${
-                          isToday ? 'text-white rounded-full w-6 h-6 flex items-center justify-center text-xs' : 'text-gray-900'
-                        }`}
-                        style={isToday ? { backgroundColor: primaryColor } : {}}
+                    <div className="flex justify-between items-start mb-2">
+                      <span className={`text-sm font-medium ${
+                        isTodayDate ? 'text-white bg-blue-500 rounded-full w-6 h-6 flex items-center justify-center' : ''
+                      }`}>
+                        {day.getDate()}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1">
+                      {daySessionsData.slice(0, 3).map((session, sessionIndex) => (
+                        <div
+                          key={sessionIndex}
+                          className={`text-xs p-1 rounded text-white truncate ${getSessionStatusColor(session.status)}`}
+                          title={`${session.session_time} - ${session.status}`}
                         >
-                          {day.getDate()}
+                          {session.session_time}
                         </div>
-                        
-                        <div className="space-y-1">
-                          {daySessions.map(session => (
-                            <div
-                              key={session.id}
-                              className="text-xs p-1 rounded cursor-pointer hover:opacity-80"
-                              style={{ backgroundColor: `${secondaryColor}15`, color: primaryColor }}
-                            >
-                              <div className="flex items-center mb-1">
-                                <Clock className="h-3 w-3 mr-1" />
-                                {formatTime(session.session_date)}
-                              </div>
-                              <div className="flex items-center mb-1">
-                                <User className="h-3 w-3 mr-1" />
-                                <span className="truncate">Client</span>
-                              </div>
-                              <Badge
-                                variant="secondary"
-                                className={`text-xs ${getStatusColor(session.status)}`}
-                              >
-                                {session.status}
-                              </Badge>
-                            </div>
-                          ))}
+                      ))}
+                      
+                      {daySessionsData.length > 3 && (
+                        <div className="text-xs text-gray-500 text-center">
+                          +{daySessionsData.length - 3} more
                         </div>
-                      </>
-                    )}
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -251,4 +242,4 @@ const CalendarPage = () => {
   );
 };
 
-export default CalendarPage;
+export default Calendar;
