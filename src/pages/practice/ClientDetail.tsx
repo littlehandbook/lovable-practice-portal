@@ -1,11 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { DashboardLayout } from '@/components/layouts/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { ClientResourcesList } from '@/components/practice/ClientResourcesList';
 import { SessionNotesTab } from '@/components/practice/SessionNotesTab';
-import { User, Calendar, FileText, Mail, Phone, MapPin, Stethoscope } from 'lucide-react';
+import { EditClientDialog } from '@/components/EditClientDialog';
+import { User, Calendar, FileText, Mail, Phone, MapPin, Stethoscope, Edit } from 'lucide-react';
 import { ClientService } from '@/services/ClientService';
 import { Client } from '@/models';
 import { useToast } from '@/hooks/use-toast';
@@ -15,6 +18,7 @@ const ClientDetailPage = () => {
   const { clientId } = useParams<{ clientId: string }>();
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -53,6 +57,20 @@ const ClientDetailPage = () => {
     fetchClient();
   }, [clientId, toast]);
 
+  const handleClientUpdated = async () => {
+    // Refresh client data after update
+    if (clientId && isUUID(clientId)) {
+      try {
+        const { data, error } = await ClientService.getClient(clientId);
+        if (!error && data) {
+          setClient(data);
+        }
+      } catch (error) {
+        console.error('Error refreshing client data:', error);
+      }
+    }
+  };
+
   if (!clientId || !isUUID(clientId)) {
     return (
       <DashboardLayout>
@@ -90,14 +108,23 @@ const ClientDetailPage = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center justify-center w-12 h-12 bg-teal-100 rounded-full">
-            <User className="h-6 w-6 text-teal-600" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center justify-center w-12 h-12 bg-teal-100 rounded-full">
+              <User className="h-6 w-6 text-teal-600" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">{client.name}</h1>
+              <p className="text-gray-500">Client Details</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{client.name}</h1>
-            <p className="text-gray-500">Client Details</p>
-          </div>
+          <Button
+            onClick={() => setShowEditDialog(true)}
+            className="flex items-center gap-2"
+          >
+            <Edit className="h-4 w-4" />
+            Edit Client
+          </Button>
         </div>
 
         <Tabs defaultValue="overview" className="space-y-4">
@@ -200,6 +227,13 @@ const ClientDetailPage = () => {
             <ClientResourcesList clientId={clientId} />
           </TabsContent>
         </Tabs>
+
+        <EditClientDialog
+          open={showEditDialog}
+          onOpenChange={setShowEditDialog}
+          client={client}
+          onClientUpdated={handleClientUpdated}
+        />
       </div>
     </DashboardLayout>
   );
