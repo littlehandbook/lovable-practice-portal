@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { ClientResource, CreateResourceInput } from '@/models/ClientResource';
 import { isUUID } from '@/lib/utils';
