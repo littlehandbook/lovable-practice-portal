@@ -1,17 +1,22 @@
-
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '@/components/layouts/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Video, Phone, Users, Clock, Monitor, Settings, Play, Pause } from 'lucide-react';
+import { Video, Phone, Users, Clock, Monitor, Settings, Play, Pause, PhoneOff } from 'lucide-react';
 import { useBranding } from '@/hooks/useBranding';
+import { VideoSessionService, VideoSession } from '@/services/VideoSessionService';
+import { TwilioAccessToken } from '@/services/TwilioApiService';
+import { useToast } from '@/components/ui/use-toast';
 
 const TelehealthPage = () => {
-  const [isCallActive, setIsCallActive] = useState(false);
+  const [activeSession, setActiveSession] = useState<VideoSession | null>(null);
+  const [accessToken, setAccessToken] = useState<TwilioAccessToken | null>(null);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const { branding } = useBranding();
+  const { toast } = useToast();
   
   // Apply branding colors to CSS variables
   useEffect(() => {
@@ -24,7 +29,7 @@ const TelehealthPage = () => {
   const primaryColor = branding.primary_color || '#0f766e';
   const secondaryColor = branding.secondary_color || '#14b8a6';
 
-  // Mock upcoming sessions
+  // Mock upcoming sessions - in real app this would come from SessionService
   const upcomingSessions = [
     {
       id: '1',
@@ -32,7 +37,7 @@ const TelehealthPage = () => {
       time: '10:00 AM',
       duration: '50 min',
       status: 'ready',
-      joinUrl: '#'
+      sessionId: 'session-1'
     },
     {
       id: '2',
@@ -40,7 +45,7 @@ const TelehealthPage = () => {
       time: '11:30 AM',
       duration: '50 min',
       status: 'waiting',
-      joinUrl: '#'
+      sessionId: 'session-2'
     },
     {
       id: '3',
@@ -48,9 +53,91 @@ const TelehealthPage = () => {
       time: '2:00 PM',
       duration: '50 min',
       status: 'scheduled',
-      joinUrl: '#'
+      sessionId: 'session-3'
     }
   ];
+
+  const handleStartSession = async (sessionId: string) => {
+    try {
+      setIsLoading(true);
+      console.log('Starting session:', sessionId);
+
+      // Join the video session as a practitioner
+      const { data: token, error } = await VideoSessionService.joinVideoSession(
+        sessionId,
+        'current-user-id', // In real app, get from auth context
+        'practitioner'
+      );
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: error,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (token) {
+        setAccessToken(token);
+        
+        // Get session details
+        const { data: session } = await VideoSessionService.getVideoSession(sessionId);
+        if (session) {
+          setActiveSession(session);
+          toast({
+            title: "Session Started",
+            description: "Video session is now active"
+          });
+        }
+      }
+    } catch (error: any) {
+      console.error('Error starting session:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start video session",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEndSession = async () => {
+    if (!activeSession) return;
+
+    try {
+      setIsLoading(true);
+      console.log('Ending session:', activeSession.sessionId);
+
+      const { error } = await VideoSessionService.endVideoSession(activeSession.sessionId);
+      
+      if (error) {
+        toast({
+          title: "Error",
+          description: error,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setActiveSession(null);
+      setAccessToken(null);
+      toast({
+        title: "Session Ended",
+        description: "Video session has been terminated"
+      });
+    } catch (error: any) {
+      console.error('Error ending session:', error);
+      toast({
+        title: "Error",
+        description: "Failed to end video session",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -89,15 +176,25 @@ const TelehealthPage = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {isCallActive ? (
+            {activeSession ? (
               <div className="text-center py-8">
                 <div className="w-32 h-32 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
                   <Users className="h-16 w-16 text-gray-400" />
                 </div>
                 <h3 className="text-xl font-semibold mb-2" style={{ color: primaryColor }}>
-                  Session with Sarah Johnson
+                  Active Session
                 </h3>
-                <p className="text-gray-500 mb-4">Duration: 25:34</p>
+                <p className="text-gray-500 mb-2">Room: {activeSession.roomName}</p>
+                <p className="text-gray-500 mb-4">Participants: {activeSession.participants}/{activeSession.maxParticipants}</p>
+                
+                {accessToken && (
+                  <div className="mb-4 p-3 bg-gray-100 rounded-lg">
+                    <p className="text-xs text-gray-600 mb-2">Access Token Generated</p>
+                    <p className="text-xs font-mono text-gray-800 break-all">
+                      {accessToken.token.substring(0, 50)}...
+                    </p>
+                  </div>
+                )}
                 
                 <div className="flex justify-center space-x-4 mb-6">
                   <Button
@@ -135,8 +232,10 @@ const TelehealthPage = () => {
                   <Button
                     variant="destructive"
                     size="lg"
-                    onClick={() => setIsCallActive(false)}
+                    onClick={handleEndSession}
+                    disabled={isLoading}
                   >
+                    <PhoneOff className="h-5 w-5 mr-2" />
                     End Session
                   </Button>
                 </div>
@@ -147,11 +246,13 @@ const TelehealthPage = () => {
                     <div className="text-sm text-gray-500">Video Quality</div>
                   </div>
                   <div>
-                    <div className="text-2xl font-bold" style={{ color: secondaryColor }}>95ms</div>
-                    <div className="text-sm text-gray-500">Latency</div>
+                    <div className="text-2xl font-bold" style={{ color: secondaryColor }}>
+                      {activeSession.status.toUpperCase()}
+                    </div>
+                    <div className="text-sm text-gray-500">Status</div>
                   </div>
                   <div>
-                    <div className="text-2xl font-bold" style={{ color: primaryColor }}>Stable</div>
+                    <div className="text-2xl font-bold" style={{ color: primaryColor }}>Secure</div>
                     <div className="text-sm text-gray-500">Connection</div>
                   </div>
                 </div>
@@ -160,18 +261,7 @@ const TelehealthPage = () => {
               <div className="text-center py-8">
                 <Monitor className="h-16 w-16 mx-auto text-gray-300 mb-4" />
                 <h3 className="text-lg font-medium text-gray-500 mb-2">No Active Session</h3>
-                <p className="text-gray-400 mb-4">Start or join a telehealth session</p>
-                <Button 
-                  onClick={() => setIsCallActive(true)}
-                  style={{ 
-                    backgroundColor: primaryColor,
-                    color: 'white'
-                  }}
-                  className="hover:opacity-90"
-                >
-                  <Play className="h-4 w-4 mr-2" />
-                  Start Test Session
-                </Button>
+                <p className="text-gray-400 mb-4">Start a telehealth session from your scheduled appointments</p>
               </div>
             )}
           </CardContent>
@@ -223,16 +313,23 @@ const TelehealthPage = () => {
                     </Badge>
                     <Button 
                       size="sm"
-                      disabled={session.status === 'scheduled'}
+                      disabled={session.status === 'scheduled' || isLoading || !!activeSession}
+                      onClick={() => handleStartSession(session.sessionId)}
                       style={{ 
-                        backgroundColor: session.status !== 'scheduled' ? primaryColor : undefined,
-                        color: session.status !== 'scheduled' ? 'white' : undefined
+                        backgroundColor: session.status !== 'scheduled' && !activeSession ? primaryColor : undefined,
+                        color: session.status !== 'scheduled' && !activeSession ? 'white' : undefined
                       }}
-                      className={session.status !== 'scheduled' ? "hover:opacity-90" : ""}
+                      className={session.status !== 'scheduled' && !activeSession ? "hover:opacity-90" : ""}
                     >
-                      {session.status === 'waiting' ? 'Join Now' : 
-                       session.status === 'ready' ? 'Start Session' : 
-                       'Not Ready'}
+                      {isLoading ? (
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      ) : (
+                        <>
+                          {session.status === 'waiting' ? 'Join Now' : 
+                           session.status === 'ready' ? 'Start Session' : 
+                           'Not Ready'}
+                        </>
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -287,7 +384,7 @@ const TelehealthPage = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-sm">Session Recording</span>
                     <Badge variant="outline" style={{ borderColor: primaryColor, color: primaryColor }}>
-                      Disabled
+                      Available
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
