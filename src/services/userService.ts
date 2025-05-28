@@ -26,7 +26,6 @@ export async function upsertUser(userId: string, userData: UserPayload): Promise
   const res = await fetch(`${API_BASE_URL}/users/${userId}`, {
     method: 'PUT',
     headers: {
-      'Authorization': `Bearer ${await getAuthToken()}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(userData),
@@ -39,7 +38,6 @@ export async function upsertUser(userId: string, userData: UserPayload): Promise
 export async function fetchUserByEmail(email: string): Promise<User | null> {
   const res = await fetch(`${API_BASE_URL}/users/by-email/${encodeURIComponent(email)}`, {
     headers: {
-      'Authorization': `Bearer ${await getAuthToken()}`,
       'Content-Type': 'application/json'
     }
   });
@@ -55,7 +53,6 @@ export async function fetchUserByEmail(email: string): Promise<User | null> {
 export async function fetchUser(userId: string): Promise<User | null> {
   const res = await fetch(`${API_BASE_URL}/users/${userId}`, {
     headers: {
-      'Authorization': `Bearer ${await getAuthToken()}`,
       'Content-Type': 'application/json'
     }
   });
@@ -66,10 +63,4 @@ export async function fetchUser(userId: string): Promise<User | null> {
   }
   
   return res.json();
-}
-
-// Helper function to get auth token
-async function getAuthToken(): Promise<string> {
-  // In a real implementation, this would get the token from your auth context
-  return '';
 }

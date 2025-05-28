@@ -22,7 +22,6 @@ export async function upsertUserRole(userId: string, roleData: RolePayload): Pro
   const res = await fetch(`${API_BASE_URL}/user-roles/${userId}`, {
     method: 'PUT',
     headers: {
-      'Authorization': `Bearer ${await getAuthToken()}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(roleData),
@@ -35,7 +34,6 @@ export async function upsertUserRole(userId: string, roleData: RolePayload): Pro
 export async function fetchUserRoles(tenantId: string): Promise<UserRole[]> {
   const res = await fetch(`${API_BASE_URL}/user-roles?tenantId=${tenantId}`, {
     headers: {
-      'Authorization': `Bearer ${await getAuthToken()}`,
       'Content-Type': 'application/json'
     }
   });
@@ -52,16 +50,9 @@ export async function deleteUserRole(roleId: string): Promise<void> {
   const res = await fetch(`${API_BASE_URL}/user-roles/${roleId}`, {
     method: 'DELETE',
     headers: {
-      'Authorization': `Bearer ${await getAuthToken()}`,
       'Content-Type': 'application/json'
     }
   });
   
   if (!res.ok) throw new Error(`Error deleting user role: ${res.statusText}`);
-}
-
-// Helper function to get auth token
-async function getAuthToken(): Promise<string> {
-  // In a real implementation, this would get the token from your auth context
-  return '';
 }

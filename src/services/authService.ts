@@ -31,7 +31,6 @@ export async function login(credentials: LoginCredentials): Promise<AuthResponse
   const res = await fetch(`${API_BASE_URL}/auth/login`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${await getAuthToken()}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(credentials),
@@ -45,7 +44,6 @@ export async function register(data: RegisterData): Promise<AuthResponse> {
   const res = await fetch(`${API_BASE_URL}/auth/register`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${await getAuthToken()}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(data),
@@ -59,17 +57,10 @@ export async function verifyEmail(email: string): Promise<void> {
   const res = await fetch(`${API_BASE_URL}/auth/verify-email`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${await getAuthToken()}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({ email }),
   });
   
   if (!res.ok) throw new Error(`Email verification failed: ${res.statusText}`);
-}
-
-// Helper function to get auth token
-async function getAuthToken(): Promise<string> {
-  // In a real implementation, this would get the token from your auth context
-  return '';
 }

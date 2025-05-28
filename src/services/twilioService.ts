@@ -20,7 +20,6 @@ export async function createTwilioRoom(roomName: string, tenantId: string): Prom
   const res = await fetch(`${API_BASE_URL}/twilio/rooms`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${await getAuthToken()}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({ roomName, tenantId }),
@@ -38,7 +37,6 @@ export async function generateTwilioToken(
   const res = await fetch(`${API_BASE_URL}/twilio/token`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${await getAuthToken()}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({ identity, roomName, tenantId }),
@@ -52,16 +50,9 @@ export async function endTwilioRoom(roomSid: string): Promise<void> {
   const res = await fetch(`${API_BASE_URL}/twilio/rooms/${roomSid}/end`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${await getAuthToken()}`,
       'Content-Type': 'application/json'
     }
   });
   
   if (!res.ok) throw new Error(`Error ending Twilio room: ${res.statusText}`);
-}
-
-// Helper function to get auth token
-async function getAuthToken(): Promise<string> {
-  // In a real implementation, this would get the token from your auth context
-  return '';
 }
