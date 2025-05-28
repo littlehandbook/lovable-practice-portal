@@ -1,7 +1,7 @@
 
 // src/services/tenantService.ts
 
-const API_BASE_URL = '/api'; // Use local Next.js API routes
+const API_BASE_URL = '/api'; // Use Vite proxy to microservices
 
 export interface Tenant {
   tenant_id: string;

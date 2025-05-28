@@ -1,7 +1,7 @@
 
 // src/services/clientGoalsService.ts
 
-const API_BASE_URL = '/api'; // Use local Next.js API routes
+const API_BASE_URL = '/api'; // Use Vite proxy to microservices
 
 export interface ClientGoals {
   emotional_mental: string;

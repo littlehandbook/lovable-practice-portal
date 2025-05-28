@@ -1,7 +1,7 @@
 
 // src/services/configurationService.ts
 
-const API_BASE_URL = '/api'; // Use local Next.js API routes
+const API_BASE_URL = '/api'; // Use Vite proxy to microservices
 
 export interface Configuration {
   key: string;
