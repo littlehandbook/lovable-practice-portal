@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -33,130 +32,140 @@ import ClientSettingsPage from "./pages/client/ClientSettings";
 
 const queryClient = new QueryClient();
 
+import { useMonitoring } from "@/hooks/useMonitoring";
+
+// Component to initialize monitoring
+function MonitoringWrapper({ children }: { children: React.ReactNode }) {
+  useMonitoring();
+  return <>{children}</>;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<Index />} />
-            <Route path="/auth/login" element={<Login />} />
-            <Route path="/auth/register" element={<Register />} />
-            <Route path="/auth/verify-email" element={<VerifyEmail />} />
-            <Route path="/auth/forgot-password" element={<ForgotPassword />} />
-            <Route path="/auth/reset-password" element={<ResetPassword />} />
-            <Route path="/auth/callback" element={<AuthCallback />} />
-            
-            {/* Protected Routes - Practitioner Portal */}
-            <Route 
-              path="/practice" 
-              element={
-                <ProtectedRoute>
-                  <PractitionerDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route 
-              path="/practice/clients" 
-              element={
-                <ProtectedRoute>
-                  <ClientsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route 
-              path="/practice/clients/:clientId" 
-              element={
-                <ProtectedRoute>
-                  <ClientDetailPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route 
-              path="/practice/calendar" 
-              element={
-                <ProtectedRoute>
-                  <CalendarPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route 
-              path="/practice/telehealth" 
-              element={
-                <ProtectedRoute>
-                  <TelehealthPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route 
-              path="/practice/settings" 
-              element={
-                <ProtectedRoute>
-                  <SettingsPage />
-                </ProtectedRoute>
-              }
-            />
-            
-            {/* Protected Routes - Client Portal */}
-            <Route 
-              path="/client" 
-              element={
-                <ProtectedRoute>
-                  <ClientDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route 
-              path="/client/book" 
-              element={
-                <ProtectedRoute>
-                  <BookSessionPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route 
-              path="/client/sessions" 
-              element={
-                <ProtectedRoute>
-                  <ClientSessionsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route 
-              path="/client/documents" 
-              element={
-                <ProtectedRoute>
-                  <ClientDocumentsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route 
-              path="/client/settings" 
-              element={
-                <ProtectedRoute>
-                  <ClientSettingsPage />
-                </ProtectedRoute>
-              }
-            />
-            
-            {/* Admin Routes */}
-            <Route 
-              path="/admin"
-              element={
-                <ProtectedRoute>
-                  <Admin />
-                </ProtectedRoute>
-              }
-            />
-            
-            {/* Catch-all route for 404 */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+      <MonitoringWrapper>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<Index />} />
+              <Route path="/auth/login" element={<Login />} />
+              <Route path="/auth/register" element={<Register />} />
+              <Route path="/auth/verify-email" element={<VerifyEmail />} />
+              <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+              <Route path="/auth/reset-password" element={<ResetPassword />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
+              
+              {/* Protected Routes - Practitioner Portal */}
+              <Route 
+                path="/practice" 
+                element={
+                  <ProtectedRoute>
+                    <PractitionerDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path="/practice/clients" 
+                element={
+                  <ProtectedRoute>
+                    <ClientsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path="/practice/clients/:clientId" 
+                element={
+                  <ProtectedRoute>
+                    <ClientDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path="/practice/calendar" 
+                element={
+                  <ProtectedRoute>
+                    <CalendarPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path="/practice/telehealth" 
+                element={
+                  <ProtectedRoute>
+                    <TelehealthPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path="/practice/settings" 
+                element={
+                  <ProtectedRoute>
+                    <SettingsPage />
+                  </ProtectedRoute>
+                }
+              />
+              
+              {/* Protected Routes - Client Portal */}
+              <Route 
+                path="/client" 
+                element={
+                  <ProtectedRoute>
+                    <ClientDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path="/client/book" 
+                element={
+                  <ProtectedRoute>
+                    <BookSessionPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path="/client/sessions" 
+                element={
+                  <ProtectedRoute>
+                    <ClientSessionsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path="/client/documents" 
+                element={
+                  <ProtectedRoute>
+                    <ClientDocumentsPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route 
+                path="/client/settings" 
+                element={
+                  <ProtectedRoute>
+                    <ClientSettingsPage />
+                  </ProtectedRoute>
+                }
+              />
+              
+              {/* Admin Routes */}
+              <Route 
+                path="/admin"
+                element={
+                  <ProtectedRoute>
+                    <Admin />
+                  </ProtectedRoute>
+                }
+              />
+              
+              {/* Catch-all route for 404 */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </MonitoringWrapper>
     </AuthProvider>
   </QueryClientProvider>
 );
