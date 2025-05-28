@@ -1,90 +1,25 @@
 
-import { Client, ServiceError } from '@/models';
-
-const API_BASE_URL = '/api';
+import { Client } from '@/models';
+import { ApiClient } from '@/utils/apiClient';
 
 export class ClientService {
   static async getClients(): Promise<{ data: Client[]; error: string | null }> {
-    try {
-      const res = await fetch(`${API_BASE_URL}/clients`, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!res.ok) {
-        return { data: [], error: `Failed to fetch clients: ${res.statusText}` };
-      }
-
-      const clients = await res.json();
-      return { data: clients, error: null };
-    } catch (error: any) {
-      console.error('Unexpected error in getClients:', error);
-      return { data: [], error: error.message };
-    }
+    const response = await ApiClient.get<Client[]>('/clients');
+    return {
+      data: response.data || [],
+      error: response.error
+    };
   }
 
   static async getClient(clientId: string): Promise<{ data: Client | null; error: string | null }> {
-    try {
-      const res = await fetch(`${API_BASE_URL}/clients/${clientId}`, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!res.ok) {
-        return { data: null, error: `Failed to fetch client: ${res.statusText}` };
-      }
-
-      const client = await res.json();
-      return { data: client, error: null };
-    } catch (error: any) {
-      console.error('Unexpected error in getClient:', error);
-      return { data: null, error: error.message };
-    }
+    return await ApiClient.get<Client>(`/clients/${clientId}`);
   }
 
   static async createClient(clientData: Omit<Client, 'id' | 'created_at' | 'updated_at'>): Promise<{ data: Client | null; error: string | null }> {
-    try {
-      const res = await fetch(`${API_BASE_URL}/clients`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(clientData)
-      });
-
-      if (!res.ok) {
-        return { data: null, error: `Failed to create client: ${res.statusText}` };
-      }
-
-      const client = await res.json();
-      return { data: client, error: null };
-    } catch (error: any) {
-      console.error('Unexpected error in createClient:', error);
-      return { data: null, error: error.message };
-    }
+    return await ApiClient.post<Client>('/clients', clientData);
   }
 
   static async updateClient(clientId: string, clientData: Partial<Omit<Client, 'id' | 'created_at' | 'updated_at'>>): Promise<{ data: Client | null; error: string | null }> {
-    try {
-      const res = await fetch(`${API_BASE_URL}/clients/${clientId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(clientData)
-      });
-
-      if (!res.ok) {
-        return { data: null, error: `Failed to update client: ${res.statusText}` };
-      }
-
-      const client = await res.json();
-      return { data: client, error: null };
-    } catch (error: any) {
-      console.error('Unexpected error in updateClient:', error);
-      return { data: null, error: error.message };
-    }
+    return await ApiClient.put<Client>(`/clients/${clientId}`, clientData);
   }
 }
