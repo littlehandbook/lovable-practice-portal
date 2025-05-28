@@ -1,0 +1,48 @@
+
+name: Apply DB Migrations
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'db/migrations/**'
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Set up Java for Flyway
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Cache Flyway CLI
+        uses: actions/cache@v3
+        with:
+          path: ~/.flyway
+          key: ${{ runner.os }}-flyway
+
+      - name: Install Flyway CLI
+        run: |
+          curl -L https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/9.20.0/flyway-commandline-9.20.0-linux-x64.tar.gz \
+            | tar xz -C ~/
+          mv ~/flyway-9.20.0 ~/flyway
+
+      - name: Run Flyway migrations
+        env:
+          FLYWAY_URL: ${{ secrets.DB_URL }}
+          FLYWAY_USER: ${{ secrets.DB_USER }}
+          FLYWAY_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          ~/flyway/flyway migrate \
+            -url="${FLYWAY_URL}" \
+            -user="${FLYWAY_USER}" \
+            -password="${FLYWAY_PASSWORD}" \
+            -locations="filesystem:db/migrations" \
+            -validateMigrationNaming=true \
+            -outOfOrder=false
