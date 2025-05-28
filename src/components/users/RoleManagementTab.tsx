@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus } from 'lucide-react';
 import { UserService } from '@/service/UserService';
-import { UserRole } from '@/repository/UserRepository';
+import { UserRole } from '@/types/user';
 import { useToast } from '@/hooks/use-toast';
 
 interface RoleManagementTabProps {

@@ -1,12 +1,15 @@
 
-import { RoleRepository, Role } from '@/repository/RoleRepository';
+import { Role } from '@/types/role';
 
 export class RoleService {
-  constructor(private repo = new RoleRepository()) {}
+  private apiUrl = '/api/roles';
 
   async listRoles(): Promise<Role[]> {
-    const roles = await this.repo.findAll();
-    return roles;
+    const response = await fetch(this.apiUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch roles: ${response.statusText}`);
+    }
+    return response.json();
   }
 
   async addRole(name: string): Promise<Role> {
@@ -15,13 +18,20 @@ export class RoleService {
       throw new Error('Role name cannot be empty');
     }
 
-    // Check if role already exists
-    const existingRole = await this.repo.findByName(trimmedName);
-    if (existingRole) {
-      throw new Error('Role name already exists');
+    const response = await fetch(this.apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ name: trimmedName }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(error || 'Failed to create role');
     }
 
-    return this.repo.create(trimmedName);
+    return response.json();
   }
 
   async updateRole(id: string, name: string): Promise<Role> {
@@ -30,16 +40,29 @@ export class RoleService {
       throw new Error('Role name cannot be empty');
     }
 
-    // Check if another role with this name exists
-    const existingRole = await this.repo.findByName(trimmedName);
-    if (existingRole && existingRole.id !== id) {
-      throw new Error('Role name already exists');
+    const response = await fetch(`${this.apiUrl}/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ name: trimmedName }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(error || 'Failed to update role');
     }
 
-    return this.repo.update(id, trimmedName);
+    return response.json();
   }
 
   async deleteRole(id: string): Promise<void> {
-    return this.repo.delete(id);
+    const response = await fetch(`${this.apiUrl}/${id}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to delete role: ${response.statusText}`);
+    }
   }
 }

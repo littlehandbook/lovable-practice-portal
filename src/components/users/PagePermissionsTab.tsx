@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { UserService } from '@/service/UserService';
-import { UserRole, PagePermission } from '@/repository/UserRepository';
+import { UserRole, PagePermission } from '@/types/user';
 import { useToast } from '@/hooks/use-toast';
 
 // Component definitions for different pages

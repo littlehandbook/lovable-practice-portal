@@ -1,22 +1,37 @@
 
-import { UserRepository, User, UserRole, PagePermission } from '@/repository/UserRepository';
+import { User, UserRole, PagePermission } from '@/types/user';
 
 export class UserService {
-  constructor(private repo = new UserRepository()) {}
+  private apiUrl = '/api/users';
 
   async listTenantUsers(tenantId: string): Promise<User[]> {
     if (!tenantId) throw new Error('Tenant ID is required');
-    return this.repo.getTenantUsers(tenantId);
+    
+    const response = await fetch(`${this.apiUrl}/tenant/${tenantId}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch users: ${response.statusText}`);
+    }
+    return response.json();
   }
 
   async listUserRoles(tenantId: string): Promise<UserRole[]> {
     if (!tenantId) throw new Error('Tenant ID is required');
-    return this.repo.getUserRoles(tenantId);
+    
+    const response = await fetch(`/api/user-roles?tenantId=${tenantId}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch user roles: ${response.statusText}`);
+    }
+    return response.json();
   }
 
   async listPagePermissions(tenantId: string): Promise<PagePermission[]> {
     if (!tenantId) throw new Error('Tenant ID is required');
-    return this.repo.getPagePermissions(tenantId);
+    
+    const response = await fetch(`/api/page-permissions?tenantId=${tenantId}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch page permissions: ${response.statusText}`);
+    }
+    return response.json();
   }
 
   async addUser(
@@ -35,25 +50,25 @@ export class UserService {
       throw new Error('Invalid email format');
     }
 
-    const fullName = `${firstName} ${lastName}`;
-    
-    // Check if therapist exists
-    const existingTherapist = await this.repo.getTherapistByEmail(email);
-    
-    let therapistId;
-    if (!existingTherapist || existingTherapist.length === 0) {
-      // Create new therapist
-      therapistId = await this.repo.registerTherapist(
-        crypto.randomUUID(),
+    const response = await fetch(this.apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
         email,
-        fullName
-      );
-    } else {
-      therapistId = existingTherapist[0].id;
-    }
+        firstName,
+        lastName,
+        role,
+        tenantId,
+        createdBy,
+      }),
+    });
 
-    // Add user to tenant
-    await this.repo.addUserToTenant(therapistId, tenantId, role, createdBy);
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(error || 'Failed to add user');
+    }
   }
 
   async createRole(
@@ -66,7 +81,26 @@ export class UserService {
       throw new Error('Role name is required');
     }
 
-    return this.repo.createUserRole(tenantId, roleName, roleDescription, userId);
+    const response = await fetch('/api/user-roles', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        tenantId,
+        roleName,
+        roleDescription,
+        userId,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(error || 'Failed to create role');
+    }
+
+    const result = await response.json();
+    return result.id;
   }
 
   async updatePermissions(
@@ -81,7 +115,22 @@ export class UserService {
       ? currentRoles.filter(r => r !== role)
       : [...currentRoles, role];
 
-    await this.repo.updatePagePermissions(tenantId, pageId, newRoles, userId);
+    const response = await fetch(`/api/page-permissions/${pageId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        tenantId,
+        roles: newRoles,
+        userId,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to update permissions: ${response.statusText}`);
+    }
+
     return newRoles;
   }
 

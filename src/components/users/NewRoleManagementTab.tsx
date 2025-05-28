@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Plus, Trash2, Edit2 } from 'lucide-react';
 import { RoleService } from '@/service/RoleService';
-import { Role } from '@/repository/RoleRepository';
+import { Role } from '@/types/role';
 import { useToast } from '@/hooks/use-toast';
 
 export function NewRoleManagementTab() {

@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { User, ShieldCheck, Settings } from 'lucide-react';
 import { UserService } from '@/service/UserService';
-import { User as UserType, UserRole, PagePermission } from '@/repository/UserRepository';
+import { User as UserType, UserRole, PagePermission } from '@/types/user';
 import { UserManagementTab } from './users/UserManagementTab';
 import { RoleManagementTab } from './users/RoleManagementTab';
 import { NewRoleManagementTab } from './users/NewRoleManagementTab';
