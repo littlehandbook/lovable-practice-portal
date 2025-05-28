@@ -4,15 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Sheet, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { TenantManagement } from "./TenantManagement";
-
-interface Tenant {
-  tenant_id: string; // Now UUID string
-  practice_name: string;
-  status: string;
-  created_at: string;
-}
+import { validateTenantIsolation, Tenant } from "@/services/tenantService";
 
 interface TenantsListProps {
   tenants: Tenant[];
@@ -28,21 +21,19 @@ export const TenantsList = ({ tenants, onRefreshNeeded }: TenantsListProps) => {
 
   const runIsolationCheck = async () => {
     try {
-      const { data, error } = await supabase.rpc(
-        'sp_validate_tenant_isolation' as any,
-        {}
-      );
+      console.log('Running tenant isolation check via microservice');
       
-      if (error) throw error;
+      const isValid = await validateTenantIsolation();
       
       toast({
         title: "Isolation Check",
-        description: data 
+        description: isValid 
           ? "Tenant isolation is working correctly!" 
           : "WARNING: Tenant isolation check failed!",
-        variant: data ? "default" : "destructive",
+        variant: isValid ? "default" : "destructive",
       });
     } catch (error: any) {
+      console.error('Error running isolation check:', error);
       toast({
         title: "Error",
         description: `Failed to run isolation check: ${error.message}`,

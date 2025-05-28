@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,18 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Save, AlertCircle, Clock } from 'lucide-react';
-
-interface ConfigurationItem {
-  key: string;
-  value: any;
-  type: string;
-  version: number;
-  updated_at: string;
-  updated_by: string;
-}
+import { fetchConfiguration, updateConfiguration, Configuration } from '@/services/configurationService';
 
 // Common timezones with their display names
 const TIMEZONES = [
@@ -46,7 +38,7 @@ export function ConfigurationTab() {
 
   const tenantId = user?.id || '00000000-0000-0000-0000-000000000000';
 
-  // Default configuration schema - removed practice_name
+  // Default configuration schema
   const defaultConfig = {
     login_timeout: 10,
     session_duration: 50,
@@ -88,42 +80,31 @@ export function ConfigurationTab() {
   useEffect(() => {
     if (!tenantId || !user) return;
     
-    const fetchConfig = async () => {
+    const fetchConfigData = async () => {
       setLoading(true);
       setError(null);
       
       try {
-        const { data, error } = await supabase.rpc('sp_get_config', { 
-          p_tenant: tenantId 
-        });
-
-        if (error) {
-          console.error('Error fetching config:', error);
-          // Don't show error for empty configuration - this is normal for new tenants
-          if (error.message?.includes('no rows') || error.code === 'PGRST116') {
-            // No configuration found - use defaults
-            setConfig({ ...defaultConfig });
-          } else {
-            setError('Failed to load configuration');
-          }
-        } else {
-          const configMap: Record<string, any> = { ...defaultConfig };
-          
-          if (data && Array.isArray(data)) {
-            data.forEach((row: ConfigurationItem) => {
-              try {
-                configMap[row.key] = typeof row.value === 'string' 
-                  ? JSON.parse(row.value) 
-                  : row.value;
-              } catch (e) {
-                configMap[row.key] = row.value;
-              }
-            });
-          }
-          
-          setConfig(configMap);
-          setPendingChanges({});
+        console.log('Fetching configuration via microservice for tenant:', tenantId);
+        
+        const data = await fetchConfiguration(tenantId);
+        
+        const configMap: Record<string, any> = { ...defaultConfig };
+        
+        if (data && Array.isArray(data)) {
+          data.forEach((row: Configuration) => {
+            try {
+              configMap[row.key] = typeof row.value === 'string' 
+                ? JSON.parse(row.value) 
+                : row.value;
+            } catch (e) {
+              configMap[row.key] = row.value;
+            }
+          });
         }
+        
+        setConfig(configMap);
+        setPendingChanges({});
       } catch (err) {
         console.error('Configuration fetch error:', err);
         // Use default configuration if fetch fails
@@ -134,7 +115,7 @@ export function ConfigurationTab() {
       }
     };
 
-    fetchConfig();
+    fetchConfigData();
   }, [tenantId, user]);
 
   // Update pending changes for a configuration key
@@ -162,20 +143,10 @@ export function ConfigurationTab() {
         pendingChanges.login_timeout = timeout;
       }
 
-      // Save each pending change
+      // Save each pending change via microservice
       for (const [key, value] of Object.entries(pendingChanges)) {
-        const { error } = await supabase.rpc('sp_update_config', {
-          p_tenant: tenantId,
-          p_key: key,
-          p_value: JSON.stringify(value),
-          p_user: user.id
-        });
-
-        if (error) {
-          setError(`Failed to update ${key}: ${error.message}`);
-          setSaving(false);
-          return;
-        }
+        console.log('Updating configuration via microservice:', key, value);
+        await updateConfiguration(tenantId, key, value, user.id);
       }
 
       // Update local config state and clear pending changes
@@ -187,10 +158,11 @@ export function ConfigurationTab() {
         description: 'Configuration saved successfully'
       });
     } catch (err) {
-      setError('Failed to save configuration');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save configuration';
+      setError(errorMessage);
       toast({
         title: 'Error',
-        description: 'Failed to save configuration',
+        description: errorMessage,
         variant: 'destructive'
       });
     } finally {

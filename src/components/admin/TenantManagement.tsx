@@ -2,15 +2,8 @@
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-
-interface Tenant {
-  tenant_id: string; // This will now be a UUID string
-  practice_name: string;
-  status: string;
-  created_at: string;
-}
+import { updateTenantStatus, Tenant } from "@/services/tenantService";
 
 interface TenantManagementProps {
   tenant: Tenant;
@@ -27,15 +20,9 @@ export const TenantManagement = ({ tenant, onStatusUpdated }: TenantManagementPr
   const handleStatusToggle = async () => {
     const newStatus = tenant.status === 'active' ? 'suspended' : 'active';
     try {
-      const { error } = await supabase.rpc(
-        'sp_update_tenant_status' as any,
-        { 
-          p_tenant_id: tenant.tenant_id, // Now UUID format
-          p_new_status: newStatus
-        }
-      );
-        
-      if (error) throw error;
+      console.log('Updating tenant status via microservice:', tenant.tenant_id, newStatus);
+      
+      await updateTenantStatus(tenant.tenant_id, newStatus);
       
       toast({
         title: "Status Updated",
@@ -44,6 +31,7 @@ export const TenantManagement = ({ tenant, onStatusUpdated }: TenantManagementPr
       
       onStatusUpdated();
     } catch (error: any) {
+      console.error('Error updating tenant status:', error);
       toast({
         title: "Error",
         description: `Failed to update status: ${error.message}`,

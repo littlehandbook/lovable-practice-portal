@@ -5,23 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Save, Info } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { fetchClientGoals, updateClientGoals, ClientGoals } from '@/services/clientGoalsService';
 
 interface ClientGoalsTabProps {
   clientId: string;
-}
-
-interface GoalData {
-  emotional_mental: string;
-  physical: string;
-  social_relational: string;
-  spiritual: string;
-  environmental: string;
-  intellectual_occupational: string;
-  financial: string;
 }
 
 const goalDescriptions = {
@@ -41,7 +31,6 @@ const validateUuid = (u: string): boolean => {
 
 // Helper function to generate a UUID from a simple ID (for demo purposes)
 const generateUUIDFromId = (id: string): string => {
-  // For demo purposes, create a predictable UUID from the simple ID
   const paddedId = id.padStart(8, '0');
   return `${paddedId}-0000-4000-8000-000000000000`;
 };
@@ -51,7 +40,7 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
   const { toast } = useToast();
   
   // Initialize with empty strings to prevent undefined values
-  const [goals, setGoals] = useState<GoalData>({
+  const [goals, setGoals] = useState<ClientGoals>({
     emotional_mental: '',
     physical: '',
     social_relational: '',
@@ -83,65 +72,24 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
   // Convert clientId to UUID format if needed
   const clientUUID = validateUuid(clientId) ? clientId : generateUUIDFromId(clientId);
 
-  // Log the UUIDs for debugging
-  console.log('ClientGoalsTab Debug Info:', {
-    originalClientId: clientId,
-    clientUUID,
-    tenantId,
-    userId: user.id,
-    isClientIdValid: validateUuid(clientId),
-    isTenantIdValid: validateUuid(tenantId),
-    isUserIdValid: validateUuid(user.id)
-  });
-
   useEffect(() => {
-    fetchGoals();
+    fetchGoalsData();
   }, [clientId, tenantId]);
 
-  const fetchGoals = async () => {
+  const fetchGoalsData = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      console.log('Fetching goals with params:', {
-        p_client_id: clientUUID,
-        p_tenant_id: tenantId
-      });
+      console.log('Fetching goals via microservice for client:', clientUUID);
       
-      const { data, error } = await supabase.rpc('sp_get_client_goals', {
-        p_client_id: clientUUID,
-        p_tenant_id: tenantId
-      });
+      const data = await fetchClientGoals(clientUUID, tenantId);
 
-      console.log('Goals fetch result:', { data, error });
-
-      if (error) {
-        console.error('Error fetching goals:', error);
-        setError('Failed to load client goals');
-        toast({
-          title: 'Error',
-          description: `Failed to load client goals: ${error.message}`,
-          variant: 'destructive'
-        });
-        return;
-      }
-
-      // Handle empty array gracefully - keep default empty strings
-      if (data && data.length > 0) {
-        const goalData = data[0];
-        console.log('Setting goals from data:', goalData);
-        setGoals(prev => ({
-          emotional_mental: goalData.emotional_mental || '',
-          physical: goalData.physical || '',
-          social_relational: goalData.social_relational || '',
-          spiritual: goalData.spiritual || '',
-          environmental: goalData.environmental || '',
-          intellectual_occupational: goalData.intellectual_occupational || '',
-          financial: goalData.financial || ''
-        }));
+      if (data) {
+        console.log('Setting goals from microservice data:', data);
+        setGoals(data);
       } else {
         console.log('No goals data found, keeping default empty state');
-        // Keep the default empty state - no need to update
       }
     } catch (err) {
       console.error('Exception fetching goals:', err);
@@ -156,7 +104,7 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
     }
   };
 
-  const handleGoalChange = (field: keyof GoalData, value: string) => {
+  const handleGoalChange = (field: keyof ClientGoals, value: string) => {
     setGoals(prev => ({ ...prev, [field]: value }));
     setHasChanges(true);
     setError(null);
@@ -172,47 +120,9 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
     setError(null);
     
     try {
-      // Debug log all RPC parameters before calling
-      const rpcParams = {
-        p_client_id: clientUUID,
-        p_tenant_id: tenantId,
-        p_emotional_mental: goals.emotional_mental,
-        p_physical: goals.physical,
-        p_social_relational: goals.social_relational,
-        p_spiritual: goals.spiritual,
-        p_environmental: goals.environmental,
-        p_intellectual_occupational: goals.intellectual_occupational,
-        p_financial: goals.financial,
-        p_user_id: user.id
-      };
+      console.log('Saving goals via microservice:', goals);
 
-      console.log('Saving goals with RPC params:', rpcParams);
-
-      // Validate all UUID parameters before making the call
-      if (!validateUuid(rpcParams.p_client_id)) {
-        throw new Error(`Invalid client UUID: ${rpcParams.p_client_id}`);
-      }
-      if (!validateUuid(rpcParams.p_tenant_id)) {
-        throw new Error(`Invalid tenant UUID: ${rpcParams.p_tenant_id}`);
-      }
-      if (!validateUuid(rpcParams.p_user_id)) {
-        throw new Error(`Invalid user UUID: ${rpcParams.p_user_id}`);
-      }
-
-      const { error } = await supabase.rpc('sp_upsert_client_goals', rpcParams);
-
-      console.log('Goals save result:', { error });
-
-      if (error) {
-        console.error('Error saving goals:', error);
-        setError(`Failed to save goals: ${error.message}`);
-        toast({
-          title: 'Error',
-          description: `Failed to save client goals: ${error.message}`,
-          variant: 'destructive'
-        });
-        return;
-      }
+      await updateClientGoals(clientUUID, tenantId, goals, user.id);
 
       setHasChanges(false);
       toast({
@@ -233,7 +143,7 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
     }
   };
 
-  const renderGoalField = (key: keyof GoalData, label: string) => (
+  const renderGoalField = (key: keyof ClientGoals, label: string) => (
     <div key={key} className="space-y-2">
       <div className="flex items-center gap-2">
         <Label htmlFor={key}>{label}</Label>
@@ -250,7 +160,7 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
       </div>
       <Textarea
         id={key}
-        value={goals[key]} // Always guaranteed to be a string now
+        value={goals[key]}
         onChange={(e) => handleGoalChange(key, e.target.value)}
         placeholder={`Enter ${label.toLowerCase()} goals...`}
         disabled={saving}

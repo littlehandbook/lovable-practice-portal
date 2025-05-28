@@ -5,17 +5,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { createTenant, Tenant, TenantPayload } from "@/services/tenantService";
 
 interface TenantCreationFormProps {
   onTenantCreated: (tenant: Tenant) => void;
-}
-
-interface Tenant {
-  tenant_id: string;
-  practice_name: string;
-  status: string;
-  created_at: string;
 }
 
 export const TenantCreationForm = ({ onTenantCreated }: TenantCreationFormProps) => {
@@ -34,12 +27,14 @@ export const TenantCreationForm = ({ onTenantCreated }: TenantCreationFormProps)
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc(
-        'sp_create_tenant' as any, 
-        { p_practice_name: practiceName }
-      );
+      console.log('Creating tenant via microservice:', practiceName);
       
-      if (error) throw error;
+      const tenantPayload: TenantPayload = {
+        practice_name: practiceName,
+        status: 'active'
+      };
+      
+      const newTenant = await createTenant(tenantPayload);
       
       toast({
         title: "Success!",
@@ -47,12 +42,9 @@ export const TenantCreationForm = ({ onTenantCreated }: TenantCreationFormProps)
       });
       
       setPracticeName("");
-      
-      // If we have data, pass it to the parent component
-      if (data && Array.isArray(data) && data.length > 0) {
-        onTenantCreated(data[0] as Tenant);
-      }
+      onTenantCreated(newTenant);
     } catch (error: any) {
+      console.error('Error creating tenant via microservice:', error);
       toast({
         title: "Error",
         description: `Failed to create tenant: ${error.message}`,

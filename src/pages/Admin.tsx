@@ -3,17 +3,9 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 import { TenantCreationForm } from "@/components/admin/TenantCreationForm";
 import { TenantsList } from "@/components/admin/TenantsList";
-
-// Define interfaces for RPC inputs & outputs
-interface Tenant {
-  tenant_id: string;
-  practice_name: string;
-  status: string;
-  created_at: string;
-}
+import { listTenants, Tenant } from "@/services/tenantService";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -21,16 +13,12 @@ const Admin = () => {
   
   const loadTenants = async () => {
     try {
-      // Use type assertion to work around the TypeScript constraints
-      const { data, error } = await supabase.rpc(
-        'sp_get_tenants' as any
-      );
+      console.log('Loading tenants via microservice');
       
-      if (error) throw error;
-      
-      // Handle null data case with empty array fallback and type assertion
-      setTenants((data as Tenant[]) ?? []);
+      const data = await listTenants();
+      setTenants(data || []);
     } catch (error: any) {
+      console.error('Error loading tenants:', error);
       toast({
         title: "Error",
         description: `Failed to load tenants: ${error.message}`,
@@ -39,10 +27,9 @@ const Admin = () => {
     }
   };
   
-  // Use useEffect instead of useState for side effects
   useEffect(() => {
     loadTenants();
-  }, []);  // Empty dependency array means this runs once on mount
+  }, []);
 
   const handleTenantCreated = (newTenant: Tenant) => {
     setTenants([newTenant, ...tenants]);
