@@ -1,7 +1,8 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-const API_BASE_URL = '/api';
+// Use environment variable for API base URL, fallback to dev proxy
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 export interface ApiResponse<T> {
   data: T | null;
