@@ -1,7 +1,5 @@
 
-// src/services/authService.ts
-
-const API_BASE_URL = '/api'; // Use Vite proxy to microservices
+import { supabase } from "@/integrations/supabase/client";
 
 export interface LoginCredentials {
   email: string;
@@ -28,39 +26,86 @@ export interface AuthResponse {
 }
 
 export async function login(credentials: LoginCredentials): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE_URL}/auth/login`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(credentials),
-  });
+  console.log('Attempting Supabase authentication for:', credentials.email);
   
-  if (!res.ok) throw new Error(`Login failed: ${res.statusText}`);
-  return res.json();
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: credentials.email,
+    password: credentials.password,
+  });
+
+  if (error) {
+    console.error('Supabase auth error:', error);
+    throw new Error(`Login failed: ${error.message}`);
+  }
+
+  if (!data.user || !data.session) {
+    throw new Error('Login failed: No user or session returned');
+  }
+
+  console.log('Supabase authentication successful');
+
+  return {
+    user: {
+      id: data.user.id,
+      email: data.user.email!,
+    },
+    session: {
+      access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
+    },
+  };
 }
 
 export async function register(data: RegisterData): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE_URL}/auth/register`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(data),
-  });
+  console.log('Attempting Supabase registration for:', data.email);
   
-  if (!res.ok) throw new Error(`Registration failed: ${res.statusText}`);
-  return res.json();
+  const { data: authData, error } = await supabase.auth.signUp({
+    email: data.email,
+    password: data.password,
+    options: {
+      data: {
+        full_name: data.fullName,
+        practice_name: data.practiceName,
+        license_number: data.licenseNumber,
+      },
+    },
+  });
+
+  if (error) {
+    console.error('Supabase registration error:', error);
+    throw new Error(`Registration failed: ${error.message}`);
+  }
+
+  if (!authData.user || !authData.session) {
+    throw new Error('Registration failed: No user or session returned');
+  }
+
+  console.log('Supabase registration successful');
+
+  return {
+    user: {
+      id: authData.user.id,
+      email: authData.user.email!,
+    },
+    session: {
+      access_token: authData.session.access_token,
+      refresh_token: authData.session.refresh_token,
+    },
+  };
 }
 
 export async function verifyEmail(email: string): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/auth/verify-email`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ email }),
-  });
+  console.log('Requesting email verification for:', email);
   
-  if (!res.ok) throw new Error(`Email verification failed: ${res.statusText}`);
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email: email,
+  });
+
+  if (error) {
+    console.error('Email verification error:', error);
+    throw new Error(`Email verification failed: ${error.message}`);
+  }
+
+  console.log('Email verification sent successfully');
 }

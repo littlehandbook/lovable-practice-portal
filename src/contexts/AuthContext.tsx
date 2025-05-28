@@ -1,20 +1,21 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { login, register } from "@/services/authService";
+import { supabase } from "@/integrations/supabase/client";
+import { Session, User } from "@supabase/supabase-js";
 
-interface User {
+interface AuthUser {
   id: string;
   email: string;
 }
 
-interface Session {
+interface AuthSession {
   access_token: string;
   refresh_token: string;
 }
 
 interface AuthContextType {
-  user: User | null;
-  session: Session | null;
+  user: AuthUser | null;
+  session: AuthSession | null;
   loading: boolean;
   signOut: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
@@ -24,44 +25,103 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [session, setSession] = useState<AuthSession | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing session in localStorage
-    const storedSession = localStorage.getItem('auth_session');
-    const storedUser = localStorage.getItem('auth_user');
-    
-    if (storedSession && storedUser) {
-      setSession(JSON.parse(storedSession));
-      setUser(JSON.parse(storedUser));
-    }
-    
-    setLoading(false);
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session ? 'Found session' : 'No session');
+      updateAuthState(session);
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log('Auth state changed:', _event, session ? 'Session active' : 'No session');
+      updateAuthState(session);
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
+  const updateAuthState = (session: Session | null) => {
+    if (session?.user) {
+      const authUser = {
+        id: session.user.id,
+        email: session.user.email!,
+      };
+      const authSession = {
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+      };
+      
+      setUser(authUser);
+      setSession(authSession);
+      
+      // Still store in localStorage for compatibility
+      localStorage.setItem('auth_session', JSON.stringify(authSession));
+      localStorage.setItem('auth_user', JSON.stringify(authUser));
+    } else {
+      setUser(null);
+      setSession(null);
+      localStorage.removeItem('auth_session');
+      localStorage.removeItem('auth_user');
+    }
+  };
+
   const signIn = async (email: string, password: string) => {
-    const response = await login({ email, password });
-    setUser(response.user);
-    setSession(response.session);
-    localStorage.setItem('auth_session', JSON.stringify(response.session));
-    localStorage.setItem('auth_user', JSON.stringify(response.user));
+    console.log('Signing in with Supabase');
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      console.error('Sign in error:', error);
+      throw error;
+    }
+
+    console.log('Sign in successful');
+    // Auth state will be updated via the onAuthStateChange listener
   };
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    const response = await register({ email, password, fullName });
-    setUser(response.user);
-    setSession(response.session);
-    localStorage.setItem('auth_session', JSON.stringify(response.session));
-    localStorage.setItem('auth_user', JSON.stringify(response.user));
+    console.log('Signing up with Supabase');
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+        },
+      },
+    });
+
+    if (error) {
+      console.error('Sign up error:', error);
+      throw error;
+    }
+
+    console.log('Sign up successful');
+    // Auth state will be updated via the onAuthStateChange listener
   };
 
   const signOut = async () => {
-    setUser(null);
-    setSession(null);
-    localStorage.removeItem('auth_session');
-    localStorage.removeItem('auth_user');
+    console.log('Signing out');
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      console.error('Sign out error:', error);
+      throw error;
+    }
+
+    console.log('Sign out successful');
+    // Auth state will be updated via the onAuthStateChange listener
   };
 
   const value = {
