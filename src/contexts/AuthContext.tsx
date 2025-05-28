@@ -1,13 +1,24 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { User, Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { login, register } from "@/services/authService";
+
+interface User {
+  id: string;
+  email: string;
+}
+
+interface Session {
+  access_token: string;
+  refresh_token: string;
+}
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, fullName: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,43 +29,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Initialize auth state
-    const initializeAuth = async () => {
-      setLoading(true);
-      
-      // Set up auth state change listener FIRST
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        (_, session) => {
-          setSession(session);
-          setUser(session?.user ?? null);
-          setLoading(false);
-        }
-      );
-
-      // THEN check for existing session
-      const { data: { session: initialSession } } = await supabase.auth.getSession();
-      setSession(initialSession);
-      setUser(initialSession?.user ?? null);
-      
-      setLoading(false);
-      
-      return () => {
-        subscription.unsubscribe();
-      };
-    };
-
-    initializeAuth();
+    // Check for existing session in localStorage
+    const storedSession = localStorage.getItem('auth_session');
+    const storedUser = localStorage.getItem('auth_user');
+    
+    if (storedSession && storedUser) {
+      setSession(JSON.parse(storedSession));
+      setUser(JSON.parse(storedUser));
+    }
+    
+    setLoading(false);
   }, []);
 
+  const signIn = async (email: string, password: string) => {
+    const response = await login({ email, password });
+    setUser(response.user);
+    setSession(response.session);
+    localStorage.setItem('auth_session', JSON.stringify(response.session));
+    localStorage.setItem('auth_user', JSON.stringify(response.user));
+  };
+
+  const signUp = async (email: string, password: string, fullName: string) => {
+    const response = await register({ email, password, fullName });
+    setUser(response.user);
+    setSession(response.session);
+    localStorage.setItem('auth_session', JSON.stringify(response.session));
+    localStorage.setItem('auth_user', JSON.stringify(response.user));
+  };
+
   const signOut = async () => {
-    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    localStorage.removeItem('auth_session');
+    localStorage.removeItem('auth_user');
   };
 
   const value = {
     user,
     session,
     loading,
-    signOut
+    signOut,
+    signIn,
+    signUp
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,7 +1,6 @@
 
 import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface ProfileData {
@@ -10,6 +9,8 @@ interface ProfileData {
   practice_name: string;
   license_number: string;
 }
+
+const API_BASE_URL = '/api';
 
 export function useProfile() {
   const { user } = useAuth();
@@ -29,20 +30,16 @@ export function useProfile() {
     try {
       console.log('Updating profile for user:', user.id, 'with data:', profileData);
 
-      const { error } = await supabase
-        .from('tbl_therapists')
-        .update(profileData)
-        .eq('id', user.id);
+      const res = await fetch(`${API_BASE_URL}/users/${user.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(profileData)
+      });
 
-      if (error) {
-        console.error('Profile update error:', error);
-        setError(error.message);
-        toast({
-          title: 'Error',
-          description: `Failed to update profile: ${error.message}`,
-          variant: 'destructive'
-        });
-        return false;
+      if (!res.ok) {
+        throw new Error(`Profile update failed: ${res.statusText}`);
       }
 
       toast({
@@ -71,19 +68,16 @@ export function useProfile() {
     try {
       console.log('Changing password for user');
 
-      const { error } = await supabase.auth.updateUser({ 
-        password: newPassword 
+      const res = await fetch(`${API_BASE_URL}/auth/change-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ password: newPassword })
       });
 
-      if (error) {
-        console.error('Password change error:', error);
-        setError(error.message);
-        toast({
-          title: 'Error',
-          description: `Failed to change password: ${error.message}`,
-          variant: 'destructive'
-        });
-        return false;
+      if (!res.ok) {
+        throw new Error(`Password change failed: ${res.statusText}`);
       }
 
       toast({

@@ -1,7 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface BrandingData {
@@ -10,6 +9,8 @@ interface BrandingData {
   secondary_color: string;
   practice_name: string;
 }
+
+const API_BASE_URL = '/api';
 
 export function useBranding() {
   const { user } = useAuth();
@@ -24,7 +25,6 @@ export function useBranding() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Convert user ID to UUID format for tenant_id (user ID is already a UUID)
   const tenantId = user?.id || '00000000-0000-0000-0000-000000000000';
 
   const fetchBranding = useCallback(async () => {
@@ -34,18 +34,17 @@ export function useBranding() {
     try {
       console.log('Fetching branding via microservice for tenant:', tenantId);
 
-      const { data, error: brandingError } = await supabase.functions.invoke('branding-service', {
-        body: {
-          action: 'get',
-          tenant_id: tenantId
+      const res = await fetch(`${API_BASE_URL}/branding/${tenantId}`, {
+        headers: {
+          'Content-Type': 'application/json'
         }
       });
 
-      if (brandingError) {
-        console.error('Error fetching branding:', brandingError);
-        setError('Failed to load branding');
-        return;
+      if (!res.ok) {
+        throw new Error(`Failed to fetch branding: ${res.statusText}`);
       }
+
+      const data = await res.json();
 
       setBranding({
         logo_url: data.logo_url || '',
@@ -71,38 +70,21 @@ export function useBranding() {
     try {
       console.log('Uploading logo for tenant:', tenantId);
 
-      // Create the logos bucket if it doesn't exist
-      const bucketName = 'logos';
-      
-      // Check if bucket exists, if not create it
-      const { data: buckets } = await supabase.storage.listBuckets();
-      const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
-      
-      if (!bucketExists) {
-        const { error: bucketError } = await supabase.storage.createBucket(bucketName, {
-          public: true
-        });
-        if (bucketError) {
-          console.error('Error creating bucket:', bucketError);
-        }
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('tenant_id', tenantId);
+
+      const res = await fetch(`${API_BASE_URL}/branding/upload-logo`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!res.ok) {
+        throw new Error(`Logo upload failed: ${res.statusText}`);
       }
 
-      const fileName = `${tenantId}/logo-${Date.now()}.${file.name.split('.').pop()}`;
-
-      const { data, error: uploadError } = await supabase.storage
-        .from(bucketName)
-        .upload(fileName, file, { upsert: true });
-
-      if (uploadError) {
-        console.error('Logo upload error:', uploadError);
-        throw uploadError;
-      }
-
-      const { data: urlData } = supabase.storage
-        .from(bucketName)
-        .getPublicUrl(fileName);
-
-      return urlData.publicUrl;
+      const data = await res.json();
+      return data.logo_url;
     } catch (err) {
       console.error('Exception uploading logo:', err);
       setError('Failed to upload logo');
@@ -122,29 +104,23 @@ export function useBranding() {
     try {
       console.log('Saving branding via microservice for tenant:', tenantId);
 
-      const { data, error: brandingError } = await supabase.functions.invoke('branding-service', {
-        body: {
-          action: 'upsert',
-          tenant_id: tenantId,
+      const res = await fetch(`${API_BASE_URL}/branding/${tenantId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
           logo_url: brandingData.logo_url || branding.logo_url,
           primary_color: brandingData.primary_color || branding.primary_color,
           secondary_color: brandingData.secondary_color || branding.secondary_color,
           practice_name: brandingData.practice_name || branding.practice_name
-        }
+        })
       });
 
-      if (brandingError) {
-        console.error('Error saving branding:', brandingError);
-        setError(`Failed to save branding: ${brandingError.message}`);
-        toast({
-          title: 'Error',
-          description: `Failed to save branding: ${brandingError.message}`,
-          variant: 'destructive'
-        });
-        return false;
+      if (!res.ok) {
+        throw new Error(`Failed to save branding: ${res.statusText}`);
       }
 
-      // Update local state
       setBranding(prev => ({ ...prev, ...brandingData }));
       
       toast({

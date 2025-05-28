@@ -1,6 +1,4 @@
 
-import { supabase } from '@/integrations/supabase/client';
-
 export interface ClientJournalEntry {
   id: string;
   client_id: string;
@@ -27,26 +25,22 @@ export interface UpdateJournalEntryInput extends Partial<CreateJournalEntryInput
   id: string;
 }
 
+const API_BASE_URL = '/api';
+
 export class ClientJournalService {
   static async getClientJournalEntries(): Promise<{ data: ClientJournalEntry[]; error: string | null }> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        return { data: [], error: 'User not authenticated' };
+      const res = await fetch(`${API_BASE_URL}/client-journal`, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!res.ok) {
+        return { data: [], error: `Failed to fetch journal entries: ${res.statusText}` };
       }
 
-      const { data, error } = await supabase
-        .from('tbl_client_journal' as any)
-        .select('*')
-        .order('session_date', { ascending: false })
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Supabase error in getClientJournalEntries:', error);
-        return { data: [], error: error.message };
-      }
-
-      const entries = (data || []) as unknown as ClientJournalEntry[];
+      const entries = await res.json();
       return { data: entries, error: null };
     } catch (error: any) {
       console.error('Unexpected error in getClientJournalEntries:', error);
@@ -56,36 +50,19 @@ export class ClientJournalService {
 
   static async createJournalEntry(input: CreateJournalEntryInput): Promise<{ data: ClientJournalEntry | null; error: string | null }> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        return { data: null, error: 'User not authenticated' };
+      const res = await fetch(`${API_BASE_URL}/client-journal`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(input)
+      });
+
+      if (!res.ok) {
+        return { data: null, error: `Failed to create journal entry: ${res.statusText}` };
       }
 
-      // For now, use mock client and tenant IDs since auth doesn't have these claims yet
-      const mockClientId = 'client-123';
-      const mockTenantId = user.user_metadata?.tenant_id || 'tenant-123';
-
-      const { data, error } = await supabase
-        .from('tbl_client_journal' as any)
-        .insert({
-          client_id: mockClientId,
-          tenant_id: mockTenantId,
-          title: input.title,
-          content: input.content,
-          session_date: input.session_date,
-          is_shared_with_practitioner: input.is_shared_with_practitioner || false,
-          created_by: user.id,
-          updated_by: user.id
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Database insert error:', error);
-        return { data: null, error: error.message };
-      }
-
-      const entry = data as unknown as ClientJournalEntry;
+      const entry = await res.json();
       return { data: entry, error: null };
     } catch (error: any) {
       console.error('Unexpected error in createJournalEntry:', error);
@@ -95,38 +72,19 @@ export class ClientJournalService {
 
   static async updateJournalEntry(input: UpdateJournalEntryInput): Promise<{ data: ClientJournalEntry | null; error: string | null }> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        return { data: null, error: 'User not authenticated' };
+      const res = await fetch(`${API_BASE_URL}/client-journal/${input.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(input)
+      });
+
+      if (!res.ok) {
+        return { data: null, error: `Failed to update journal entry: ${res.statusText}` };
       }
 
-      const updateData: any = {
-        updated_by: user.id
-      };
-
-      if (input.title !== undefined) updateData.title = input.title;
-      if (input.content !== undefined) updateData.content = input.content;
-      if (input.session_date !== undefined) updateData.session_date = input.session_date;
-      if (input.is_shared_with_practitioner !== undefined) {
-        updateData.is_shared_with_practitioner = input.is_shared_with_practitioner;
-        if (input.is_shared_with_practitioner) {
-          updateData.shared_at = new Date().toISOString();
-        }
-      }
-
-      const { data, error } = await supabase
-        .from('tbl_client_journal' as any)
-        .update(updateData)
-        .eq('id', input.id)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Database update error:', error);
-        return { data: null, error: error.message };
-      }
-
-      const entry = data as unknown as ClientJournalEntry;
+      const entry = await res.json();
       return { data: entry, error: null };
     } catch (error: any) {
       console.error('Unexpected error in updateJournalEntry:', error);
@@ -136,14 +94,15 @@ export class ClientJournalService {
 
   static async deleteJournalEntry(entryId: string): Promise<{ error: string | null }> {
     try {
-      const { error } = await supabase
-        .from('tbl_client_journal' as any)
-        .delete()
-        .eq('id', entryId);
+      const res = await fetch(`${API_BASE_URL}/client-journal/${entryId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
 
-      if (error) {
-        console.error('Database delete error:', error);
-        return { error: error.message };
+      if (!res.ok) {
+        return { error: `Failed to delete journal entry: ${res.statusText}` };
       }
 
       return { error: null };

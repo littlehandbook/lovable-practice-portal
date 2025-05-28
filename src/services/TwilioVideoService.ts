@@ -1,6 +1,4 @@
 
-import { supabase } from '@/integrations/supabase/client';
-
 export interface VideoSessionData {
   id: string;
   session_id: string;
@@ -46,37 +44,27 @@ export interface ChatMessage {
   tenant_id: string;
 }
 
+const API_BASE_URL = '/api';
+
 export class TwilioVideoService {
   static async createVideoSession(sessionId: string): Promise<{ data: VideoSessionData | null; error: string | null }> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        return { data: null, error: 'User not authenticated' };
-      }
-
       console.log('Creating video session for session ID:', sessionId);
 
-      const roomName = `session-${sessionId}`;
-      
-      const { data, error } = await supabase
-        .from('tbl_video_sessions' as any)
-        .insert({
-          session_id: sessionId,
-          twilio_room_name: roomName,
-          status: 'scheduled',
-          participant_count: 0,
-          max_participants: 2
-        })
-        .select()
-        .single();
+      const res = await fetch(`${API_BASE_URL}/video-sessions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ session_id: sessionId })
+      });
 
-      if (error) {
-        console.error('Error creating video session:', error);
-        return { data: null, error: error.message };
+      if (!res.ok) {
+        return { data: null, error: `Failed to create video session: ${res.statusText}` };
       }
 
-      console.log('Video session created successfully:', data);
-      return { data: data as unknown as VideoSessionData, error: null };
+      const videoSession = await res.json();
+      return { data: videoSession, error: null };
     } catch (error: any) {
       console.error('Unexpected error in createVideoSession:', error);
       return { data: null, error: error.message };
@@ -85,18 +73,18 @@ export class TwilioVideoService {
 
   static async getVideoSession(sessionId: string): Promise<{ data: VideoSessionData | null; error: string | null }> {
     try {
-      const { data, error } = await supabase
-        .from('tbl_video_sessions' as any)
-        .select('*')
-        .eq('session_id', sessionId)
-        .single();
+      const res = await fetch(`${API_BASE_URL}/video-sessions/${sessionId}`, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
 
-      if (error) {
-        console.error('Error fetching video session:', error);
-        return { data: null, error: error.message };
+      if (!res.ok) {
+        return { data: null, error: `Failed to fetch video session: ${res.statusText}` };
       }
 
-      return { data: data as unknown as VideoSessionData, error: null };
+      const videoSession = await res.json();
+      return { data: videoSession, error: null };
     } catch (error: any) {
       console.error('Unexpected error in getVideoSession:', error);
       return { data: null, error: error.message };
@@ -109,27 +97,16 @@ export class TwilioVideoService {
     additionalData?: Partial<VideoSessionData>
   ): Promise<{ error: string | null }> {
     try {
-      const updateData: any = {
-        status,
-        ...additionalData
-      };
+      const res = await fetch(`${API_BASE_URL}/video-sessions/${sessionId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status, ...additionalData })
+      });
 
-      if (status === 'active' && !additionalData?.started_at) {
-        updateData.started_at = new Date().toISOString();
-      }
-
-      if (status === 'completed' && !additionalData?.ended_at) {
-        updateData.ended_at = new Date().toISOString();
-      }
-
-      const { error } = await supabase
-        .from('tbl_video_sessions' as any)
-        .update(updateData)
-        .eq('session_id', sessionId);
-
-      if (error) {
-        console.error('Error updating video session status:', error);
-        return { error: error.message };
+      if (!res.ok) {
+        return { error: `Failed to update video session: ${res.statusText}` };
       }
 
       return { error: null };
@@ -141,23 +118,20 @@ export class TwilioVideoService {
 
   static async addParticipant(participantData: Omit<SessionParticipant, 'id' | 'tenant_id'>): Promise<{ data: SessionParticipant | null; error: string | null }> {
     try {
-      const { data, error } = await supabase
-        .from('tbl_session_participants' as any)
-        .insert(participantData)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error adding participant:', error);
-        return { data: null, error: error.message };
-      }
-
-      // Update participant count
-      await supabase.rpc('increment_participant_count', {
-        session_id: participantData.video_session_id
+      const res = await fetch(`${API_BASE_URL}/video-sessions/participants`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(participantData)
       });
 
-      return { data: data as unknown as SessionParticipant, error: null };
+      if (!res.ok) {
+        return { data: null, error: `Failed to add participant: ${res.statusText}` };
+      }
+
+      const participant = await res.json();
+      return { data: participant, error: null };
     } catch (error: any) {
       console.error('Unexpected error in addParticipant:', error);
       return { data: null, error: error.message };
@@ -169,14 +143,16 @@ export class TwilioVideoService {
     updates: Partial<SessionParticipant>
   ): Promise<{ error: string | null }> {
     try {
-      const { error } = await supabase
-        .from('tbl_session_participants' as any)
-        .update(updates)
-        .eq('id', participantId);
+      const res = await fetch(`${API_BASE_URL}/video-sessions/participants/${participantId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updates)
+      });
 
-      if (error) {
-        console.error('Error updating participant:', error);
-        return { error: error.message };
+      if (!res.ok) {
+        return { error: `Failed to update participant: ${res.statusText}` };
       }
 
       return { error: null };
@@ -188,18 +164,18 @@ export class TwilioVideoService {
 
   static async getSessionParticipants(videoSessionId: string): Promise<{ data: SessionParticipant[]; error: string | null }> {
     try {
-      const { data, error } = await supabase
-        .from('tbl_session_participants' as any)
-        .select('*')
-        .eq('video_session_id', videoSessionId)
-        .order('joined_at', { ascending: true });
+      const res = await fetch(`${API_BASE_URL}/video-sessions/${videoSessionId}/participants`, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
 
-      if (error) {
-        console.error('Error fetching session participants:', error);
-        return { data: [], error: error.message };
+      if (!res.ok) {
+        return { data: [], error: `Failed to fetch participants: ${res.statusText}` };
       }
 
-      return { data: (data || []) as unknown as SessionParticipant[], error: null };
+      const participants = await res.json();
+      return { data: participants, error: null };
     } catch (error: any) {
       console.error('Unexpected error in getSessionParticipants:', error);
       return { data: [], error: error.message };
@@ -208,18 +184,20 @@ export class TwilioVideoService {
 
   static async addChatMessage(messageData: Omit<ChatMessage, 'id' | 'tenant_id'>): Promise<{ data: ChatMessage | null; error: string | null }> {
     try {
-      const { data, error } = await supabase
-        .from('tbl_session_chat' as any)
-        .insert(messageData)
-        .select()
-        .single();
+      const res = await fetch(`${API_BASE_URL}/video-sessions/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(messageData)
+      });
 
-      if (error) {
-        console.error('Error adding chat message:', error);
-        return { data: null, error: error.message };
+      if (!res.ok) {
+        return { data: null, error: `Failed to add chat message: ${res.statusText}` };
       }
 
-      return { data: data as unknown as ChatMessage, error: null };
+      const message = await res.json();
+      return { data: message, error: null };
     } catch (error: any) {
       console.error('Unexpected error in addChatMessage:', error);
       return { data: null, error: error.message };
@@ -228,18 +206,18 @@ export class TwilioVideoService {
 
   static async getChatMessages(videoSessionId: string): Promise<{ data: ChatMessage[]; error: string | null }> {
     try {
-      const { data, error } = await supabase
-        .from('tbl_session_chat' as any)
-        .select('*')
-        .eq('video_session_id', videoSessionId)
-        .order('sent_at', { ascending: true });
+      const res = await fetch(`${API_BASE_URL}/video-sessions/${videoSessionId}/chat`, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
 
-      if (error) {
-        console.error('Error fetching chat messages:', error);
-        return { data: [], error: error.message };
+      if (!res.ok) {
+        return { data: [], error: `Failed to fetch chat messages: ${res.statusText}` };
       }
 
-      return { data: (data || []) as unknown as ChatMessage[], error: null };
+      const messages = await res.json();
+      return { data: messages, error: null };
     } catch (error: any) {
       console.error('Unexpected error in getChatMessages:', error);
       return { data: [], error: error.message };
