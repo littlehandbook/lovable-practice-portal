@@ -1,7 +1,5 @@
 
-// src/services/twilioService.ts
-
-const API_BASE_URL = '/api'; // Use Vite proxy to microservices
+import { supabase } from '@/integrations/supabase/client';
 
 export interface TwilioRoom {
   room_sid: string;
@@ -17,16 +15,16 @@ export interface TwilioToken {
 }
 
 export async function createTwilioRoom(roomName: string, tenantId: string): Promise<TwilioRoom> {
-  const res = await fetch(`${API_BASE_URL}/twilio/rooms`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ roomName, tenantId }),
-  });
-  
-  if (!res.ok) throw new Error(`Error creating Twilio room: ${res.statusText}`);
-  return res.json();
+  try {
+    const { data, error } = await supabase.functions.invoke('twilio-rooms', {
+      body: { action: 'create', roomName, tenantId }
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (error: any) {
+    throw new Error(`Error creating Twilio room: ${error.message}`);
+  }
 }
 
 export async function generateTwilioToken(
@@ -34,25 +32,26 @@ export async function generateTwilioToken(
   roomName: string, 
   tenantId: string
 ): Promise<TwilioToken> {
-  const res = await fetch(`${API_BASE_URL}/twilio/token`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ identity, roomName, tenantId }),
-  });
-  
-  if (!res.ok) throw new Error(`Error generating Twilio token: ${res.statusText}`);
-  return res.json();
+  try {
+    const { data, error } = await supabase.functions.invoke('twilio-token', {
+      body: { identity, roomName, tenantId }
+    });
+
+    if (error) throw error;
+    return data;
+  } catch (error: any) {
+    throw new Error(`Error generating Twilio token: ${error.message}`);
+  }
 }
 
 export async function endTwilioRoom(roomSid: string): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/twilio/rooms/${roomSid}/end`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  });
-  
-  if (!res.ok) throw new Error(`Error ending Twilio room: ${res.statusText}`);
+  try {
+    const { error } = await supabase.functions.invoke('twilio-rooms', {
+      body: { action: 'end', roomSid }
+    });
+
+    if (error) throw error;
+  } catch (error: any) {
+    throw new Error(`Error ending Twilio room: ${error.message}`);
+  }
 }

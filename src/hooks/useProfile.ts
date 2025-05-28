@@ -2,6 +2,7 @@
 import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProfileData {
   full_name: string;
@@ -9,8 +10,6 @@ interface ProfileData {
   practice_name: string;
   license_number: string;
 }
-
-const API_BASE_URL = '/api';
 
 export function useProfile() {
   const { user } = useAuth();
@@ -30,16 +29,12 @@ export function useProfile() {
     try {
       console.log('Updating profile for user:', user.id, 'with data:', profileData);
 
-      const res = await fetch(`${API_BASE_URL}/users/${user.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(profileData)
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: profileData
       });
 
-      if (!res.ok) {
-        throw new Error(`Profile update failed: ${res.statusText}`);
+      if (updateError) {
+        throw updateError;
       }
 
       toast({
@@ -47,7 +42,7 @@ export function useProfile() {
         description: 'Profile updated successfully'
       });
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Exception updating profile:', err);
       setError('Failed to update profile');
       toast({
@@ -68,16 +63,12 @@ export function useProfile() {
     try {
       console.log('Changing password for user');
 
-      const res = await fetch(`${API_BASE_URL}/auth/change-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ password: newPassword })
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword
       });
 
-      if (!res.ok) {
-        throw new Error(`Password change failed: ${res.statusText}`);
+      if (updateError) {
+        throw updateError;
       }
 
       toast({
@@ -85,7 +76,7 @@ export function useProfile() {
         description: 'Password changed successfully'
       });
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error('Exception changing password:', err);
       setError('Failed to change password');
       toast({

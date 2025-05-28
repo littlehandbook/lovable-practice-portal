@@ -1,7 +1,5 @@
 
-// src/services/userService.ts
-
-const API_BASE_URL = '/api'; // Use Vite proxy to microservices
+import { supabase } from '@/integrations/supabase/client';
 
 export interface User {
   id: string;
@@ -23,44 +21,44 @@ export interface UserPayload {
 }
 
 export async function upsertUser(userId: string, userData: UserPayload): Promise<User> {
-  const res = await fetch(`${API_BASE_URL}/users/${userId}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(userData),
-  });
-  
-  if (!res.ok) throw new Error(`Error upserting user: ${res.statusText}`);
-  return res.json();
+  console.log('User upsert feature not yet implemented via microservice');
+  throw new Error('User management microservice not yet implemented');
 }
 
 export async function fetchUserByEmail(email: string): Promise<User | null> {
-  const res = await fetch(`${API_BASE_URL}/users/by-email/${encodeURIComponent(email)}`, {
-    headers: {
-      'Content-Type': 'application/json'
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('email', email)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      throw error;
     }
-  });
-  
-  if (!res.ok) {
-    if (res.status === 404) return null;
-    throw new Error(`Error fetching user: ${res.statusText}`);
+
+    return data;
+  } catch (error: any) {
+    console.error('Error fetching user by email:', error);
+    return null;
   }
-  
-  return res.json();
 }
 
 export async function fetchUser(userId: string): Promise<User | null> {
-  const res = await fetch(`${API_BASE_URL}/users/${userId}`, {
-    headers: {
-      'Content-Type': 'application/json'
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') {
+      throw error;
     }
-  });
-  
-  if (!res.ok) {
-    if (res.status === 404) return null;
-    throw new Error(`Error fetching user: ${res.statusText}`);
+
+    return data;
+  } catch (error: any) {
+    console.error('Error fetching user:', error);
+    return null;
   }
-  
-  return res.json();
 }

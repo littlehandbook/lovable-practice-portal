@@ -1,7 +1,5 @@
 
-// src/services/roleService.ts
-
-const API_BASE_URL = '/api'; // Use Vite proxy to microservices
+import { supabase } from '@/integrations/supabase/client';
 
 export interface UserRole {
   id: string;
@@ -19,40 +17,16 @@ export interface RolePayload {
 }
 
 export async function upsertUserRole(userId: string, roleData: RolePayload): Promise<UserRole> {
-  const res = await fetch(`${API_BASE_URL}/user-roles/${userId}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(roleData),
-  });
-  
-  if (!res.ok) throw new Error(`Error upserting user role: ${res.statusText}`);
-  return res.json();
+  console.log('Role management microservice not yet implemented');
+  throw new Error('Role management microservice not yet implemented');
 }
 
 export async function fetchUserRoles(tenantId: string): Promise<UserRole[]> {
-  const res = await fetch(`${API_BASE_URL}/user-roles?tenantId=${tenantId}`, {
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  });
-  
-  if (!res.ok) {
-    if (res.status === 404) return [];
-    throw new Error(`Error fetching user roles: ${res.statusText}`);
-  }
-  
-  return res.json();
+  console.log('Role fetching microservice not yet implemented for tenant:', tenantId);
+  return [];
 }
 
 export async function deleteUserRole(roleId: string): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/user-roles/${roleId}`, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  });
-  
-  if (!res.ok) throw new Error(`Error deleting user role: ${res.statusText}`);
+  console.log('Role deletion microservice not yet implemented');
+  throw new Error('Role deletion microservice not yet implemented');
 }

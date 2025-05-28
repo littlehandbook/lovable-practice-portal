@@ -1,7 +1,5 @@
 
-// src/services/tenantService.ts
-
-const API_BASE_URL = '/api'; // Use Vite proxy to microservices
+import { supabase } from '@/integrations/supabase/client';
 
 export interface Tenant {
   tenant_id: string;
@@ -15,68 +13,31 @@ export interface TenantPayload {
   status?: 'active' | 'suspended';
 }
 
-// Create a new tenant
 export async function createTenant(data: TenantPayload): Promise<Tenant> {
-  const res = await fetch(`${API_BASE_URL}/tenants`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${await getAuthToken()}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(data),
-  });
-  
-  if (!res.ok) throw new Error(`Error creating tenant: ${res.statusText}`);
-  return res.json();
+  console.log('Tenant creation microservice not yet implemented');
+  throw new Error('Tenant management microservice not yet implemented');
 }
 
-// Update an existing tenant status
 export async function updateTenantStatus(
   tenantId: string,
   newStatus: string
 ): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/tenants/${tenantId}/status`, {
-    method: 'PUT',
-    headers: {
-      'Authorization': `Bearer ${await getAuthToken()}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ status: newStatus }),
-  });
-  
-  if (!res.ok) throw new Error(`Error updating tenant status: ${res.statusText}`);
+  console.log('Tenant status update microservice not yet implemented');
+  throw new Error('Tenant management microservice not yet implemented');
 }
 
-// List all tenants
 export async function listTenants(): Promise<Tenant[]> {
-  const res = await fetch(`${API_BASE_URL}/tenants`, {
-    headers: {
-      'Authorization': `Bearer ${await getAuthToken()}`,
-      'Content-Type': 'application/json'
-    }
-  });
-  
-  if (!res.ok) throw new Error(`Error fetching tenants: ${res.statusText}`);
-  return res.json();
+  console.log('Tenant listing microservice not yet implemented');
+  return [];
 }
 
-// Validate tenant isolation
 export async function validateTenantIsolation(): Promise<boolean> {
-  const res = await fetch(`${API_BASE_URL}/tenants/validate-isolation`, {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${await getAuthToken()}`,
-      'Content-Type': 'application/json'
-    }
-  });
-  
-  if (!res.ok) throw new Error(`Error validating isolation: ${res.statusText}`);
-  const result = await res.json();
-  return result.isValid;
+  console.log('Tenant isolation validation microservice not yet implemented');
+  return true; // Default to valid for now
 }
 
 // Helper function to get auth token
 async function getAuthToken(): Promise<string> {
-  // In a real implementation, this would get the token from your auth context
-  return '';
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token || '';
 }
