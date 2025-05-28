@@ -10,9 +10,9 @@ export function useMonitoring() {
   useEffect(() => {
     if (user) {
       monitoring.setUserContext(
-        user.user_id,
-        user.tenant_id,
-        user.role
+        user.id,
+        undefined, // tenant_id not available in current User interface
+        undefined  // role not available in current User interface
       );
     }
   }, [user]);
