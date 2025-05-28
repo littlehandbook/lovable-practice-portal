@@ -38,22 +38,29 @@ const ClientsPage = () => {
     try {
       const { data, error } = await ClientService.getClients();
       if (error) {
+        // Only show error for actual failures, not empty data
+        if (error !== 'No clients found') {
+          toast({
+            title: 'Error',
+            description: 'Failed to load clients',
+            variant: 'destructive'
+          });
+        }
+        setClients([]);
+      } else {
+        setClients(data || []);
+      }
+    } catch (error: any) {
+      console.error('Error loading clients:', error);
+      // Only show error for actual failures
+      const errorMessage = error?.message || 'Unknown error';
+      if (!errorMessage.includes('No clients') && !errorMessage.includes('empty')) {
         toast({
           title: 'Error',
           description: 'Failed to load clients',
           variant: 'destructive'
         });
-        setClients([]);
-      } else {
-        setClients(data);
       }
-    } catch (error: any) {
-      console.error('Error loading clients:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load clients',
-        variant: 'destructive'
-      });
       setClients([]);
     } finally {
       setLoading(false);
@@ -69,10 +76,6 @@ const ClientsPage = () => {
     client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (client.email && client.email.toLowerCase().includes(searchTerm.toLowerCase()))
   );
-
-  const getStatusColor = (status: string) => {
-    return status === 'Active' ? secondaryColor : '#6b7280';
-  };
 
   const handleClientAdded = () => {
     // Refresh the client list when a new client is added

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trash2, ExternalLink, Download } from 'lucide-react';
+import { Trash2, ExternalLink, Download, BookOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ClientResourceService } from '@/services/ClientResourceService';
 import { ClientResource } from '@/models/ClientResource';
@@ -22,20 +22,27 @@ export const ClientResourcesList = ({ clientId }: ClientResourcesListProps) => {
     try {
       const { data, error } = await ClientResourceService.getClientResources(clientId);
       if (error) {
-        toast({
-          title: "Error",
-          description: error,
-          variant: "destructive"
-        });
+        // Only show error for actual failures, not empty data
+        if (!error.includes('No resources') && !error.includes('empty')) {
+          toast({
+            title: "Error",
+            description: error,
+            variant: "destructive"
+          });
+        }
       } else {
         setResources(data);
       }
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to load resources",
-        variant: "destructive"
-      });
+      const errorMessage = error?.message || 'Unknown error';
+      // Only show error for actual failures
+      if (!errorMessage.includes('No resources') && !errorMessage.includes('empty')) {
+        toast({
+          title: "Error",
+          description: "Failed to load resources",
+          variant: "destructive"
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -132,8 +139,12 @@ export const ClientResourcesList = ({ clientId }: ClientResourcesListProps) => {
       </CardHeader>
       <CardContent>
         {resources.length === 0 ? (
-          <div className="text-center py-6 text-gray-500">
-            No resources added yet. Add resources to help educate your client.
+          <div className="text-center py-8">
+            <BookOpen className="h-12 w-12 mx-auto text-gray-300 mb-4" />
+            <h3 className="text-lg font-medium text-gray-500 mb-2">No resources found</h3>
+            <p className="text-gray-400 mb-4">
+              Add resources to help educate your client and support their therapy journey.
+            </p>
           </div>
         ) : (
           <div className="space-y-3">
