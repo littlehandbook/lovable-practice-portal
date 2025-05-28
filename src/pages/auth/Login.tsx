@@ -1,11 +1,11 @@
 
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { login } from "@/services/authService";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -18,23 +18,9 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      // Audit the login
-      try {
-        await supabase.rpc('sp_audit_login', {
-          p_therapist_id: data.user?.id,
-          p_action: 'LOGIN_SUCCESS'
-        });
-      } catch (auditError) {
-        // Don't block login if audit fails
-        console.error("Failed to log login attempt:", auditError);
-      }
+      console.log('Attempting login via microservice');
+      
+      const authResponse = await login({ email, password });
 
       toast({
         title: "Success",
@@ -49,16 +35,6 @@ const Login = () => {
         description: error.message || "Failed to sign in",
         variant: "destructive",
       });
-      
-      // Audit failed login attempt
-      try {
-        await supabase.rpc('sp_audit_login', {
-          p_therapist_id: null,
-          p_action: 'LOGIN_FAILED'
-        });
-      } catch (auditError) {
-        console.error("Failed to log failed login attempt:", auditError);
-      }
     } finally {
       setLoading(false);
     }

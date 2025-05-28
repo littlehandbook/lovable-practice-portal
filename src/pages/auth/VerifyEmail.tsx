@@ -1,12 +1,12 @@
 
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Mail, CheckCircle2, XCircle } from "lucide-react";
+import { getVerificationStatus, sendVerificationEmail } from "@/services/emailVerificationService";
 
 const VerifyEmail = () => {
   const { user } = useAuth();
@@ -18,23 +18,15 @@ const VerifyEmail = () => {
   useEffect(() => {
     if (!user) return;
 
-    // Check if email is already verified
     const checkVerification = async () => {
       setChecking(true);
       try {
-        // Check verification status from our therapist table
-        const { data, error } = await supabase.rpc(
-          'sp_get_therapist_by_email' as any,
-          { p_email: user.email }
-        );
-
-        if (error) throw error;
-
-        const isVerified = data?.[0]?.email_verified;
-        setVerified(isVerified || false);
+        console.log('Checking email verification status via microservice');
         
-        // If verified, redirect to dashboard after a short delay
-        if (isVerified) {
+        const status = await getVerificationStatus(user.email!);
+        setVerified(status.verified);
+        
+        if (status.verified) {
           setTimeout(() => navigate("/practice"), 2000);
         }
       } catch (error) {
@@ -51,12 +43,9 @@ const VerifyEmail = () => {
     if (!user?.email) return;
 
     try {
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email: user.email
-      });
-
-      if (error) throw error;
+      console.log('Sending verification email via microservice');
+      
+      await sendVerificationEmail(user.email);
 
       setVerificationSent(true);
       toast({

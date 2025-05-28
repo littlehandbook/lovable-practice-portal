@@ -1,8 +1,8 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { getVerificationStatus } from "@/services/emailVerificationService";
 
 export function useEmailVerification(redirectTo?: string) {
   const { user } = useAuth();
@@ -18,19 +18,13 @@ export function useEmailVerification(redirectTo?: string) {
       }
 
       try {
-        // Check the therapist record for email verification status
-        const { data, error } = await supabase.rpc(
-          'sp_get_therapist_by_email' as any,
-          { p_email: user.email }
-        );
-
-        if (error) throw error;
-
-        const isVerified = data?.[0]?.email_verified || false;
-        setVerified(isVerified);
+        console.log('Checking email verification via microservice for:', user.email);
+        
+        const status = await getVerificationStatus(user.email!);
+        setVerified(status.verified);
 
         // If the email is not verified and a redirect path is provided, navigate there
-        if (!isVerified && redirectTo) {
+        if (!status.verified && redirectTo) {
           navigate(redirectTo);
         }
       } catch (error) {
