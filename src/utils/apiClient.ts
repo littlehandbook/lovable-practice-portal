@@ -1,8 +1,22 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
-// Use environment variable for API base URL, fallback to dev proxy
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+// Environment-based URL configuration
+const getApiBaseUrl = () => {
+  // Check if we're in development (localhost)
+  if (window.location.hostname === 'localhost') {
+    return '/api'; // Uses vite proxy to localhost:3001
+  }
+  
+  // Check if we're on Lovable preview domain
+  if (window.location.hostname.includes('lovable.app')) {
+    return 'https://your-preview-microservice-url.lovable.app';
+  }
+  
+  // Production domain
+  return 'https://your-production-api-url.com';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 export interface ApiResponse<T> {
   data: T | null;
