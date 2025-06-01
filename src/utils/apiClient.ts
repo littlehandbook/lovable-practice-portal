@@ -22,10 +22,33 @@ export class ApiClient {
     return headers;
   }
 
+  private static getServiceUrl(endpoint: string): string {
+    const baseUrl = import.meta.env.VITE_API_URL || '/api';
+    
+    // Map endpoints to their respective services
+    if (endpoint.startsWith('/clients')) {
+      return `${baseUrl}/clients-service${endpoint}`;
+    }
+    if (endpoint.startsWith('/documents')) {
+      return `${baseUrl}/documents-service${endpoint}`;
+    }
+    if (endpoint.startsWith('/client-journal')) {
+      return `${baseUrl}/client-journal-service${endpoint}`;
+    }
+    if (endpoint.startsWith('/client-resources')) {
+      return `${baseUrl}/client-resources-service${endpoint}`;
+    }
+    
+    // Default fallback
+    return `${baseUrl}${endpoint}`;
+  }
+
   static async get<T>(endpoint: string): Promise<ApiResponse<T>> {
     try {
       const headers = await this.getAuthHeaders();
-      const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+      const url = this.getServiceUrl(endpoint);
+      
+      const res = await fetch(url, {
         method: 'GET',
         headers
       });
@@ -45,7 +68,9 @@ export class ApiClient {
   static async post<T>(endpoint: string, body?: any): Promise<ApiResponse<T>> {
     try {
       const headers = await this.getAuthHeaders();
-      const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+      const url = this.getServiceUrl(endpoint);
+      
+      const res = await fetch(url, {
         method: 'POST',
         headers,
         body: body ? JSON.stringify(body) : undefined
@@ -66,7 +91,9 @@ export class ApiClient {
   static async put<T>(endpoint: string, body?: any): Promise<ApiResponse<T>> {
     try {
       const headers = await this.getAuthHeaders();
-      const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+      const url = this.getServiceUrl(endpoint);
+      
+      const res = await fetch(url, {
         method: 'PUT',
         headers,
         body: body ? JSON.stringify(body) : undefined
@@ -87,7 +114,9 @@ export class ApiClient {
   static async delete(endpoint: string): Promise<{ error: string | null }> {
     try {
       const headers = await this.getAuthHeaders();
-      const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+      const url = this.getServiceUrl(endpoint);
+      
+      const res = await fetch(url, {
         method: 'DELETE',
         headers
       });
@@ -112,7 +141,9 @@ export class ApiClient {
         headers['Authorization'] = `Bearer ${session.access_token}`;
       }
 
-      const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+      const url = this.getServiceUrl(endpoint);
+      
+      const res = await fetch(url, {
         method: 'POST',
         headers,
         body: formData
@@ -139,7 +170,9 @@ export class ApiClient {
         headers['Authorization'] = `Bearer ${session.access_token}`;
       }
 
-      const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+      const url = this.getServiceUrl(endpoint);
+      
+      const res = await fetch(url, {
         method: 'GET',
         headers
       });
