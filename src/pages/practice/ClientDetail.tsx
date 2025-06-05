@@ -15,10 +15,10 @@ import { useAuth } from '@/contexts/AuthContext';
 
 // Import tab components
 import { ClientOverviewTab } from '@/components/practice/ClientOverviewTab';
-import { ClientGoalsTab } from '@/components/practice/ClientGoalsTab';
 import { ClientSessionHistoryTab } from '@/components/practice/ClientSessionHistoryTab';
 import { ClientDocumentsTab } from '@/components/practice/ClientDocumentsTab';
 import { ClientBillingTab } from '@/components/practice/ClientBillingTab';
+import { ClientGoalsTab } from '@/components/ClientGoalsTab'; // Use the working one
 
 const ClientDetailPage = () => {
   const { clientId } = useParams<{ clientId: string }>();
@@ -154,7 +154,6 @@ const ClientDetailPage = () => {
           <TabsContent value="goals">
             <ClientGoalsTab 
               clientId={clientId}
-              tenantId={tenantId}
             />
           </TabsContent>
 
@@ -165,17 +164,19 @@ const ClientDetailPage = () => {
           </TabsContent>
 
           <TabsContent value="documents">
-            <ClientDocumentsTab 
-              clientId={clientId}
-              tenantId={tenantId}
-            />
+            <Card>
+              <CardContent className="text-center py-8">
+                <p className="text-gray-500">Documents functionality coming soon</p>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="billing">
-            <ClientBillingTab 
-              clientId={clientId}
-              tenantId={tenantId}
-            />
+            <Card>
+              <CardContent className="text-center py-8">
+                <p className="text-gray-500">Billing functionality coming soon</p>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 

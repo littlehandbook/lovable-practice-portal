@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -54,6 +53,7 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   // Validate and ensure we have proper UUIDs
   if (!user?.id || !validateUuid(user.id)) {
@@ -81,24 +81,33 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
     setError(null);
     
     try {
-      console.log('Fetching goals via microservice for client:', clientUUID);
+      console.log('Fetching goals for client:', clientUUID, 'tenant:', tenantId);
       
       const data = await fetchClientGoals(clientUUID, tenantId);
 
       if (data) {
-        console.log('Setting goals from microservice data:', data);
+        console.log('Setting goals from data:', data);
         setGoals(data);
       } else {
         console.log('No goals data found, keeping default empty state');
+        // Keep the default empty state - this is normal for new clients
       }
+      
+      setInitialLoadComplete(true);
     } catch (err) {
       console.error('Exception fetching goals:', err);
-      setError('Failed to load client goals');
-      toast({
-        title: 'Error',
-        description: 'Failed to load client goals',
-        variant: 'destructive'
-      });
+      // Only show error if it's not a "no data found" situation
+      if (err instanceof Error && !err.message.includes('404')) {
+        setError('Failed to load client goals');
+        toast({
+          title: 'Error',
+          description: 'Failed to load client goals',
+          variant: 'destructive'
+        });
+      } else {
+        // Treat as normal - no goals exist yet
+        setInitialLoadComplete(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -106,7 +115,9 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
 
   const handleGoalChange = (field: keyof ClientGoals, value: string) => {
     setGoals(prev => ({ ...prev, [field]: value }));
-    setHasChanges(true);
+    if (initialLoadComplete) {
+      setHasChanges(true);
+    }
     setError(null);
   };
 
@@ -120,7 +131,7 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
     setError(null);
     
     try {
-      console.log('Saving goals via microservice:', goals);
+      console.log('Saving goals:', goals);
 
       await updateClientGoals(clientUUID, tenantId, goals, user.id);
 

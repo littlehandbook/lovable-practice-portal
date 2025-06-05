@@ -1,7 +1,5 @@
 
-// src/services/clientGoalsService.ts
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface ClientGoals {
   emotional_mental: string;
@@ -14,19 +12,36 @@ export interface ClientGoals {
 }
 
 export async function fetchClientGoals(clientId: string, tenantId: string): Promise<ClientGoals | null> {
-  const res = await fetch(`${API_BASE_URL}/client-goals/${clientId}?tenantId=${tenantId}`, {
-    headers: {
-      'Authorization': `Bearer ${await getAuthToken()}`,
-      'Content-Type': 'application/json'
+  console.log('Fetching goals from Supabase for client:', clientId, 'tenant:', tenantId);
+  
+  try {
+    const { data, error } = await supabase
+      .rpc('sp_get_client_goals', {
+        p_client_id: clientId,
+        p_tenant_id: tenantId
+      });
+
+    if (error) {
+      console.error('Supabase error fetching goals:', error);
+      // Return null if no goals found (404 equivalent)
+      if (error.code === 'PGRST116') {
+        return null;
+      }
+      throw new Error(`Error fetching goals: ${error.message}`);
     }
-  });
-  
-  if (!res.ok) {
-    if (res.status === 404) return null;
-    throw new Error(`Error fetching goals: ${res.statusText}`);
+
+    console.log('Goals data from Supabase:', data);
+    
+    // If no data returned, return null
+    if (!data || data.length === 0) {
+      return null;
+    }
+
+    return data[0];
+  } catch (error) {
+    console.error('Error in fetchClientGoals:', error);
+    throw error;
   }
-  
-  return res.json();
 }
 
 export async function updateClientGoals(
@@ -35,25 +50,31 @@ export async function updateClientGoals(
   goals: ClientGoals,
   userId: string
 ): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/client-goals/${clientId}`, {
-    method: 'PUT',
-    headers: {
-      'Authorization': `Bearer ${await getAuthToken()}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ 
-      goals,
-      tenantId,
-      userId
-    }),
-  });
+  console.log('Saving goals to Supabase:', { clientId, tenantId, goals, userId });
   
-  if (!res.ok) throw new Error(`Error saving goals: ${res.statusText}`);
-}
+  try {
+    const { error } = await supabase
+      .rpc('sp_upsert_client_goals', {
+        p_client_id: clientId,
+        p_tenant_id: tenantId,
+        p_emotional_mental: goals.emotional_mental,
+        p_physical: goals.physical,
+        p_social_relational: goals.social_relational,
+        p_spiritual: goals.spiritual,
+        p_environmental: goals.environmental,
+        p_intellectual_occupational: goals.intellectual_occupational,
+        p_financial: goals.financial,
+        p_user_id: userId
+      });
 
-// Helper function to get auth token
-async function getAuthToken(): Promise<string> {
-  // In a real implementation, this would get the token from your auth context
-  // For now, return empty string - the microservice will need to handle auth
-  return '';
+    if (error) {
+      console.error('Supabase error saving goals:', error);
+      throw new Error(`Error saving goals: ${error.message}`);
+    }
+
+    console.log('Goals saved successfully');
+  } catch (error) {
+    console.error('Error in updateClientGoals:', error);
+    throw error;
+  }
 }
