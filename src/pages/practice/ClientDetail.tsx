@@ -5,14 +5,21 @@ import { DashboardLayout } from '@/components/layouts/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { ClientResourcesList } from '@/components/practice/ClientResourcesList';
-import { SessionNotesTab } from '@/components/practice/SessionNotesTab';
 import { EditClientDialog } from '@/components/EditClientDialog';
-import { User, Calendar, FileText, Mail, Phone, MapPin, Stethoscope, Edit } from 'lucide-react';
+import { User, Edit } from 'lucide-react';
 import { ClientService } from '@/services/ClientService';
 import { Client } from '@/models';
 import { useToast } from '@/hooks/use-toast';
 import { isUUID } from '@/lib/utils';
+import { useEnhancedClient } from '@/hooks/useEnhancedClient';
+import { useAuth } from '@/contexts/AuthContext';
+
+// Import new tab components
+import { ClientOverviewTab } from '@/components/practice/ClientOverviewTab';
+import { ClientGoalsTab } from '@/components/practice/ClientGoalsTab';
+import { ClientSessionHistoryTab } from '@/components/practice/ClientSessionHistoryTab';
+import { ClientDocumentsTab } from '@/components/practice/ClientDocumentsTab';
+import { ClientBillingTab } from '@/components/practice/ClientBillingTab';
 
 const ClientDetailPage = () => {
   const { clientId } = useParams<{ clientId: string }>();
@@ -20,6 +27,20 @@ const ClientDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  // Get tenant ID from user metadata
+  const tenantId = user?.user_metadata?.tenant_id;
+
+  // Use enhanced client hook for additional data
+  const {
+    overview,
+    goals,
+    sessions,
+    documents,
+    loading: enhancedLoading,
+    error: enhancedError
+  } = useEnhancedClient(clientId || '', tenantId || '');
 
   useEffect(() => {
     const fetchClient = async () => {
@@ -58,7 +79,6 @@ const ClientDetailPage = () => {
   }, [clientId, toast]);
 
   const handleClientUpdated = async () => {
-    // Refresh client data after update
     if (clientId && isUUID(clientId)) {
       try {
         const { data, error } = await ClientService.getClient(clientId);
@@ -81,7 +101,7 @@ const ClientDetailPage = () => {
     );
   }
 
-  if (loading) {
+  if (loading || enhancedLoading) {
     return (
       <DashboardLayout>
         <div className="text-center py-8">
@@ -101,9 +121,13 @@ const ClientDetailPage = () => {
     );
   }
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
-  };
+  if (enhancedError) {
+    toast({
+      title: 'Warning',
+      description: 'Some client data could not be loaded',
+      variant: 'destructive'
+    });
+  }
 
   return (
     <DashboardLayout>
@@ -130,101 +154,48 @@ const ClientDetailPage = () => {
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="sessions">Sessions</TabsTrigger>
-            <TabsTrigger value="notes">Session Notes</TabsTrigger>
-            <TabsTrigger value="resources">Resources</TabsTrigger>
+            <TabsTrigger value="goals">Goals</TabsTrigger>
+            <TabsTrigger value="sessions">Session History</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="billing">Billing Info</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <User className="h-5 w-5 mr-2" />
-                  Client Information
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-500 flex items-center">
-                        <User className="h-4 w-4 mr-1" />
-                        Name
-                      </label>
-                      <p className="mt-1 text-lg">{client.name}</p>
-                    </div>
-                    
-                    {client.email && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-500 flex items-center">
-                          <Mail className="h-4 w-4 mr-1" />
-                          Email
-                        </label>
-                        <p className="mt-1">{client.email}</p>
-                      </div>
-                    )}
-                    
-                    {client.phone && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-500 flex items-center">
-                          <Phone className="h-4 w-4 mr-1" />
-                          Phone
-                        </label>
-                        <p className="mt-1">{client.phone}</p>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="space-y-4">
-                    {client.address && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-500 flex items-center">
-                          <MapPin className="h-4 w-4 mr-1" />
-                          Address
-                        </label>
-                        <p className="mt-1">{client.address}</p>
-                      </div>
-                    )}
-                    
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Status</label>
-                      <p className="mt-1">
-                        <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">
-                          Active
-                        </span>
-                      </p>
-                    </div>
-                    
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">Client Since</label>
-                      <p className="mt-1">{formatDate(client.created_at)}</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <ClientOverviewTab 
+              client={client} 
+              overview={overview}
+              tenantId={tenantId || ''}
+            />
+          </TabsContent>
+
+          <TabsContent value="goals">
+            <ClientGoalsTab 
+              clientId={clientId}
+              tenantId={tenantId || ''}
+              goals={goals}
+            />
           </TabsContent>
 
           <TabsContent value="sessions">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Calendar className="h-5 w-5 mr-2" />
-                  Sessions
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-500">Session management coming soon...</p>
-              </CardContent>
-            </Card>
+            <ClientSessionHistoryTab 
+              clientId={clientId}
+              sessions={sessions}
+            />
           </TabsContent>
 
-          <TabsContent value="notes">
-            <SessionNotesTab clientId={clientId} />
+          <TabsContent value="documents">
+            <ClientDocumentsTab 
+              clientId={clientId}
+              tenantId={tenantId || ''}
+              documents={documents}
+            />
           </TabsContent>
 
-          <TabsContent value="resources">
-            <ClientResourcesList clientId={clientId} />
+          <TabsContent value="billing">
+            <ClientBillingTab 
+              clientId={clientId}
+              tenantId={tenantId || ''}
+            />
           </TabsContent>
         </Tabs>
 
