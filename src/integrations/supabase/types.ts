@@ -365,11 +365,17 @@ export type Database = {
           address: string | null
           created_at: string
           created_by: string | null
+          date_of_birth: string | null
           email: string | null
+          emergency_contact: string | null
           id: string
           name: string
           phone: string | null
+          risk_assessment_date: string | null
+          risk_notes: string | null
+          risk_score: number | null
           tenant_id: string | null
+          therapist_id: string
           updated_at: string
           updated_by: string | null
         }
@@ -377,11 +383,17 @@ export type Database = {
           address?: string | null
           created_at?: string
           created_by?: string | null
+          date_of_birth?: string | null
           email?: string | null
+          emergency_contact?: string | null
           id?: string
           name: string
           phone?: string | null
+          risk_assessment_date?: string | null
+          risk_notes?: string | null
+          risk_score?: number | null
           tenant_id?: string | null
+          therapist_id: string
           updated_at?: string
           updated_by?: string | null
         }
@@ -389,11 +401,17 @@ export type Database = {
           address?: string | null
           created_at?: string
           created_by?: string | null
+          date_of_birth?: string | null
           email?: string | null
+          emergency_contact?: string | null
           id?: string
           name?: string
           phone?: string | null
+          risk_assessment_date?: string | null
+          risk_notes?: string | null
+          risk_score?: number | null
           tenant_id?: string | null
+          therapist_id?: string
           updated_at?: string
           updated_by?: string | null
         }
@@ -486,9 +504,12 @@ export type Database = {
           file_path: string
           file_size: number | null
           id: string
+          is_private: boolean | null
           is_shared_with_client: boolean
           mime_type: string | null
           name: string
+          report_category: string | null
+          report_subcategory: string | null
           tenant_id: string | null
           therapist_id: string | null
           updated_at: string
@@ -501,9 +522,12 @@ export type Database = {
           file_path: string
           file_size?: number | null
           id?: string
+          is_private?: boolean | null
           is_shared_with_client?: boolean
           mime_type?: string | null
           name: string
+          report_category?: string | null
+          report_subcategory?: string | null
           tenant_id?: string | null
           therapist_id?: string | null
           updated_at?: string
@@ -516,13 +540,121 @@ export type Database = {
           file_path?: string
           file_size?: number | null
           id?: string
+          is_private?: boolean | null
           is_shared_with_client?: boolean
           mime_type?: string | null
           name?: string
+          report_category?: string | null
+          report_subcategory?: string | null
           tenant_id?: string | null
           therapist_id?: string | null
           updated_at?: string
           uploaded_by?: string | null
+        }
+        Relationships: []
+      }
+      tbl_goal_guidance: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          goal_category: string
+          guidance_text: string | null
+          id: string
+          is_active: boolean | null
+          tenant_id: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          goal_category: string
+          guidance_text?: string | null
+          id?: string
+          is_active?: boolean | null
+          tenant_id?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          goal_category?: string
+          guidance_text?: string | null
+          id?: string
+          is_active?: boolean | null
+          tenant_id?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      tbl_invoice_counters: {
+        Row: {
+          current_number: number
+          last_reset_date: string
+          tenant_id: string
+        }
+        Insert: {
+          current_number?: number
+          last_reset_date?: string
+          tenant_id: string
+        }
+        Update: {
+          current_number?: number
+          last_reset_date?: string
+          tenant_id?: string
+        }
+        Relationships: []
+      }
+      tbl_invoices: {
+        Row: {
+          amount: number
+          client_id: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          invoice_number: string | null
+          issue_date: string | null
+          services_provided: Json | null
+          status: string | null
+          tenant_id: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          amount: number
+          client_id: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          invoice_number?: string | null
+          issue_date?: string | null
+          services_provided?: Json | null
+          status?: string | null
+          tenant_id?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          amount?: number
+          client_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          invoice_number?: string | null
+          issue_date?: string | null
+          services_provided?: Json | null
+          status?: string | null
+          tenant_id?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -569,6 +701,108 @@ export type Database = {
             referencedColumns: ["tenant_id"]
           },
         ]
+      }
+      tbl_referrals: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          referral_date: string | null
+          referral_reason: string | null
+          referral_type: string
+          referring_practice_name: string | null
+          referring_practitioner_email: string | null
+          referring_practitioner_name: string | null
+          referring_practitioner_phone: string | null
+          status: string | null
+          tenant_id: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          referral_date?: string | null
+          referral_reason?: string | null
+          referral_type: string
+          referring_practice_name?: string | null
+          referring_practitioner_email?: string | null
+          referring_practitioner_name?: string | null
+          referring_practitioner_phone?: string | null
+          status?: string | null
+          tenant_id?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          referral_date?: string | null
+          referral_reason?: string | null
+          referral_type?: string
+          referring_practice_name?: string | null
+          referring_practitioner_email?: string | null
+          referring_practitioner_name?: string | null
+          referring_practitioner_phone?: string | null
+          status?: string | null
+          tenant_id?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
+      tbl_sessions: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          created_by: string | null
+          duration_minutes: number | null
+          id: string
+          session_date: string | null
+          session_type: string | null
+          status: string | null
+          summary_excerpt: string | null
+          tenant_id: string | null
+          therapist_id: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          created_by?: string | null
+          duration_minutes?: number | null
+          id?: string
+          session_date?: string | null
+          session_type?: string | null
+          status?: string | null
+          summary_excerpt?: string | null
+          tenant_id?: string | null
+          therapist_id?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          duration_minutes?: number | null
+          id?: string
+          session_date?: string | null
+          session_type?: string | null
+          status?: string | null
+          summary_excerpt?: string | null
+          tenant_id?: string | null
+          therapist_id?: string | null
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
       }
       tbl_tenant_registry: {
         Row: {
