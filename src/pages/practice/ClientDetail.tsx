@@ -11,10 +11,9 @@ import { ClientService } from '@/services/ClientService';
 import { Client } from '@/models';
 import { useToast } from '@/hooks/use-toast';
 import { isUUID } from '@/lib/utils';
-import { useEnhancedClient } from '@/hooks/useEnhancedClient';
 import { useAuth } from '@/contexts/AuthContext';
 
-// Import new tab components
+// Import tab components
 import { ClientOverviewTab } from '@/components/practice/ClientOverviewTab';
 import { ClientGoalsTab } from '@/components/practice/ClientGoalsTab';
 import { ClientSessionHistoryTab } from '@/components/practice/ClientSessionHistoryTab';
@@ -30,26 +29,18 @@ const ClientDetailPage = () => {
   const { user } = useAuth();
 
   // Get tenant ID from user metadata
-  const tenantId = user?.user_metadata?.tenant_id;
-
-  // Use enhanced client hook for additional data
-  const {
-    overview,
-    goals,
-    sessions,
-    documents,
-    loading: enhancedLoading,
-    error: enhancedError
-  } = useEnhancedClient(clientId || '', tenantId || '');
+  const tenantId = user?.user_metadata?.tenant_id || user?.id || '';
 
   useEffect(() => {
     const fetchClient = async () => {
       if (!clientId || !isUUID(clientId)) {
+        console.log('Invalid client ID:', clientId);
         setLoading(false);
         return;
       }
 
       try {
+        console.log('Fetching client:', clientId);
         const { data, error } = await ClientService.getClient(clientId);
         
         if (error) {
@@ -62,6 +53,7 @@ const ClientDetailPage = () => {
           return;
         }
 
+        console.log('Client data loaded:', data);
         setClient(data);
       } catch (error) {
         console.error('Unexpected error fetching client:', error);
@@ -101,7 +93,7 @@ const ClientDetailPage = () => {
     );
   }
 
-  if (loading || enhancedLoading) {
+  if (loading) {
     return (
       <DashboardLayout>
         <div className="text-center py-8">
@@ -119,14 +111,6 @@ const ClientDetailPage = () => {
         </div>
       </DashboardLayout>
     );
-  }
-
-  if (enhancedError) {
-    toast({
-      title: 'Warning',
-      description: 'Some client data could not be loaded',
-      variant: 'destructive'
-    });
   }
 
   return (
@@ -163,38 +147,34 @@ const ClientDetailPage = () => {
           <TabsContent value="overview">
             <ClientOverviewTab 
               client={client} 
-              overview={overview}
-              tenantId={tenantId || ''}
+              tenantId={tenantId}
             />
           </TabsContent>
 
           <TabsContent value="goals">
             <ClientGoalsTab 
               clientId={clientId}
-              tenantId={tenantId || ''}
-              goals={goals}
+              tenantId={tenantId}
             />
           </TabsContent>
 
           <TabsContent value="sessions">
             <ClientSessionHistoryTab 
               clientId={clientId}
-              sessions={sessions}
             />
           </TabsContent>
 
           <TabsContent value="documents">
             <ClientDocumentsTab 
               clientId={clientId}
-              tenantId={tenantId || ''}
-              documents={documents}
+              tenantId={tenantId}
             />
           </TabsContent>
 
           <TabsContent value="billing">
             <ClientBillingTab 
               clientId={clientId}
-              tenantId={tenantId || ''}
+              tenantId={tenantId}
             />
           </TabsContent>
         </Tabs>

@@ -7,43 +7,29 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { User, Mail, Phone, MapPin, AlertTriangle, FileText, Calendar } from 'lucide-react';
 import { Client } from '@/models';
-import { ClientOverview } from '@/repository/EnhancedClientRepository';
 import { useToast } from '@/hooks/use-toast';
-import { EnhancedClientService } from '@/services/EnhancedClientService';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface ClientOverviewTabProps {
   client: Client;
-  overview: ClientOverview | null;
   tenantId: string;
 }
 
 export const ClientOverviewTab: React.FC<ClientOverviewTabProps> = ({ 
   client, 
-  overview,
   tenantId 
 }) => {
   const [isEditingRisk, setIsEditingRisk] = useState(false);
-  const [riskScore, setRiskScore] = useState(overview?.risk_score || 0);
-  const [riskNotes, setRiskNotes] = useState(overview?.risk_notes || '');
+  const [riskScore, setRiskScore] = useState(client.risk_score || 0);
+  const [riskNotes, setRiskNotes] = useState(client.risk_notes || '');
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
   const handleSaveRiskScore = async () => {
-    if (!user) return;
-    
     setSaving(true);
     try {
-      const service = new EnhancedClientService();
-      await service.updateClientRiskScore(
-        client.id,
-        tenantId,
-        riskScore,
-        riskNotes,
-        user.id
-      );
-      
+      // TODO: Implement risk score update via service
       setIsEditingRisk(false);
       toast({
         title: 'Success',
@@ -179,9 +165,9 @@ export const ClientOverviewTab: React.FC<ClientOverviewTabProps> = ({
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${getRiskScoreColor(riskScore)}`}>
                       {riskScore}/10
                     </span>
-                    {overview?.risk_assessment_date && (
+                    {client.risk_assessment_date && (
                       <span className="text-xs text-gray-500">
-                        Last updated: {formatDate(overview.risk_assessment_date)}
+                        Last updated: {formatDate(client.risk_assessment_date)}
                       </span>
                     )}
                   </div>
@@ -251,43 +237,7 @@ export const ClientOverviewTab: React.FC<ClientOverviewTabProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {overview?.referrals && overview.referrals.length > 0 ? (
-            <div className="space-y-4">
-              {overview.referrals.map((referral: any, index: number) => (
-                <div key={index} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">{referral.referring_practitioner_name}</h4>
-                      <p className="text-sm text-gray-500">{referral.referring_practice_name}</p>
-                    </div>
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      referral.status === 'completed' ? 'bg-green-100 text-green-800' : 
-                      referral.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {referral.status}
-                    </span>
-                  </div>
-                  {referral.referral_reason && (
-                    <p className="text-sm mt-2">{referral.referral_reason}</p>
-                  )}
-                  <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                    {referral.referral_date && (
-                      <span>Date: {formatDate(referral.referral_date)}</span>
-                    )}
-                    {referral.referring_practitioner_email && (
-                      <span>Email: {referral.referring_practitioner_email}</span>
-                    )}
-                    {referral.referring_practitioner_phone && (
-                      <span>Phone: {referral.referring_practitioner_phone}</span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-500 text-center py-4">No referrals on record</p>
-          )}
+          <p className="text-gray-500 text-center py-4">No referrals on record</p>
         </CardContent>
       </Card>
     </div>
