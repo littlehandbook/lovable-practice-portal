@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { ClientLayout } from '@/components/layouts/ClientLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,14 +22,11 @@ const ClientDocumentsPage = () => {
         
         if (error) {
           console.error('Error fetching documents:', error);
-          // Only show error for actual failures, not empty data
-          if (!error.includes('No documents') && !error.includes('empty')) {
-            toast({
-              title: 'Error',
-              description: 'Failed to load documents',
-              variant: 'destructive'
-            });
-          }
+          toast({
+            title: 'Error',
+            description: 'Failed to load documents',
+            variant: 'destructive'
+          });
           return;
         }
 
@@ -40,15 +38,11 @@ const ClientDocumentsPage = () => {
         setSessionNotes(sharedNotes);
       } catch (error) {
         console.error('Unexpected error fetching documents:', error);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        // Only show error for actual failures
-        if (!errorMessage.includes('No documents') && !errorMessage.includes('empty')) {
-          toast({
-            title: 'Error',
-            description: 'Failed to load documents',
-            variant: 'destructive'
-          });
-        }
+        toast({
+          title: 'Error',
+          description: 'Failed to load documents',
+          variant: 'destructive'
+        });
       } finally {
         setLoading(false);
       }

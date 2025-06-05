@@ -1,8 +1,8 @@
 
 import { useState, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProfileData {
   full_name: string;
@@ -29,12 +29,20 @@ export function useProfile() {
     try {
       console.log('Updating profile for user:', user.id, 'with data:', profileData);
 
-      const { error: updateError } = await supabase.auth.updateUser({
-        data: profileData
-      });
+      const { error } = await supabase
+        .from('tbl_therapists')
+        .update(profileData)
+        .eq('id', user.id);
 
-      if (updateError) {
-        throw updateError;
+      if (error) {
+        console.error('Profile update error:', error);
+        setError(error.message);
+        toast({
+          title: 'Error',
+          description: `Failed to update profile: ${error.message}`,
+          variant: 'destructive'
+        });
+        return false;
       }
 
       toast({
@@ -42,7 +50,7 @@ export function useProfile() {
         description: 'Profile updated successfully'
       });
       return true;
-    } catch (err: any) {
+    } catch (err) {
       console.error('Exception updating profile:', err);
       setError('Failed to update profile');
       toast({
@@ -63,12 +71,19 @@ export function useProfile() {
     try {
       console.log('Changing password for user');
 
-      const { error: updateError } = await supabase.auth.updateUser({
-        password: newPassword
+      const { error } = await supabase.auth.updateUser({ 
+        password: newPassword 
       });
 
-      if (updateError) {
-        throw updateError;
+      if (error) {
+        console.error('Password change error:', error);
+        setError(error.message);
+        toast({
+          title: 'Error',
+          description: `Failed to change password: ${error.message}`,
+          variant: 'destructive'
+        });
+        return false;
       }
 
       toast({
@@ -76,7 +91,7 @@ export function useProfile() {
         description: 'Password changed successfully'
       });
       return true;
-    } catch (err: any) {
+    } catch (err) {
       console.error('Exception changing password:', err);
       setError('Failed to change password');
       toast({

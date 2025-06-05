@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Save, Info, Target } from 'lucide-react';
+import { Save, Info } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { fetchClientGoals, updateClientGoals, ClientGoals } from '@/services/clientGoalsService';
 
@@ -93,16 +93,12 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
       }
     } catch (err) {
       console.error('Exception fetching goals:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-      // Only show error for actual failures, not empty data
-      if (!errorMessage.includes('No goals') && !errorMessage.includes('empty')) {
-        setError('Failed to load client goals');
-        toast({
-          title: 'Error',
-          description: 'Failed to load client goals',
-          variant: 'destructive'
-        });
-      }
+      setError('Failed to load client goals');
+      toast({
+        title: 'Error',
+        description: 'Failed to load client goals',
+        variant: 'destructive'
+      });
     } finally {
       setLoading(false);
     }
@@ -177,9 +173,7 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
     return (
       <Card>
         <CardContent className="p-6">
-          <div className="flex items-center justify-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
-          </div>
+          <p className="text-gray-500">Loading goals...</p>
         </CardContent>
       </Card>
     );
@@ -188,10 +182,7 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
-        <CardTitle className="flex items-center gap-2">
-          <Target className="h-5 w-5" />
-          Client Goals
-        </CardTitle>
+        <CardTitle>Client Goals</CardTitle>
         <Button
           onClick={saveGoals}
           disabled={!hasChanges || saving}

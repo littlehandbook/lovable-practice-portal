@@ -15,7 +15,6 @@ import VerifyEmail from "./pages/auth/VerifyEmail";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
 import AuthCallback from "./pages/auth/Callback";
-import TestDashboard from "./pages/TestDashboard";
 
 // Practitioner Portal Pages
 import PractitionerDashboard from "./pages/practice/Dashboard";
@@ -50,7 +49,6 @@ const App = () => (
             <Route path="/auth/forgot-password" element={<ForgotPassword />} />
             <Route path="/auth/reset-password" element={<ResetPassword />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/test-dashboard" element={<TestDashboard />} />
             
             {/* Protected Routes - Practitioner Portal */}
             <Route 

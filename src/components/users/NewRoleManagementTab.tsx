@@ -4,9 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Trash2, Edit2, Settings } from 'lucide-react';
+import { Plus, Trash2, Edit2 } from 'lucide-react';
 import { RoleService } from '@/service/RoleService';
-import { Role } from '@/types/role';
+import { Role } from '@/repository/RoleRepository';
 import { useToast } from '@/hooks/use-toast';
 
 export function NewRoleManagementTab() {
@@ -32,11 +32,7 @@ export function NewRoleManagementTab() {
       setRoles(rolesData);
     } catch (error) {
       console.error('Error fetching roles:', error);
-      // Only set error if it's not about empty data
-      const errorMessage = error instanceof Error ? error.message : 'Failed to load roles';
-      if (!errorMessage.includes('No roles') && !errorMessage.includes('empty')) {
-        setError(errorMessage);
-      }
+      setError('Failed to load roles');
       setRoles([]);
     } finally {
       setLoading(false);
@@ -114,9 +110,7 @@ export function NewRoleManagementTab() {
     return (
       <Card>
         <CardContent className="p-6">
-          <div className="flex items-center justify-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
-          </div>
+          <p className="text-gray-500">Loading roles...</p>
         </CardContent>
       </Card>
     );
@@ -156,16 +150,12 @@ export function NewRoleManagementTab() {
         {/* Roles List */}
         <div className="space-y-4">
           <h3 className="font-medium">Existing Roles</h3>
-          {error && !error.includes('No roles') && !error.includes('empty') ? (
+          {error ? (
             <div className="text-red-600 bg-red-50 p-3 rounded-md">
               {error}
             </div>
           ) : roles.length === 0 ? (
-            <div className="text-center py-8">
-              <Settings className="h-12 w-12 mx-auto text-gray-300 mb-4" />
-              <h3 className="text-lg font-medium text-gray-500 mb-2">No roles found</h3>
-              <p className="text-gray-400">Create your first role above to get started.</p>
-            </div>
+            <p className="text-gray-500">No roles found.</p>
           ) : (
             <div className="space-y-2">
               {roles.map((role) => (

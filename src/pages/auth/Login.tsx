@@ -1,27 +1,40 @@
 
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/contexts/AuthContext";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { signIn } = useAuth();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      console.log('Attempting login via Supabase');
-      
-      await signIn(email, password);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) throw error;
+
+      // Audit the login
+      try {
+        await supabase.rpc('sp_audit_login', {
+          p_therapist_id: data.user?.id,
+          p_action: 'LOGIN_SUCCESS'
+        });
+      } catch (auditError) {
+        // Don't block login if audit fails
+        console.error("Failed to log login attempt:", auditError);
+      }
 
       toast({
         title: "Success",
@@ -36,6 +49,16 @@ const Login = () => {
         description: error.message || "Failed to sign in",
         variant: "destructive",
       });
+      
+      // Audit failed login attempt
+      try {
+        await supabase.rpc('sp_audit_login', {
+          p_therapist_id: null,
+          p_action: 'LOGIN_FAILED'
+        });
+      } catch (auditError) {
+        console.error("Failed to log failed login attempt:", auditError);
+      }
     } finally {
       setLoading(false);
     }
@@ -61,7 +84,7 @@ const Login = () => {
                 type="email" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="alice.johnson@email.com"
+                placeholder="john@example.com"
                 required
               />
             </div>

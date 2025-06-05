@@ -1,5 +1,7 @@
 
-import { supabase } from '@/integrations/supabase/client';
+// src/services/configurationService.ts
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 export interface Configuration {
   key: string;
@@ -11,8 +13,19 @@ export interface Configuration {
 }
 
 export async function fetchConfiguration(tenantId: string): Promise<Configuration[]> {
-  console.log('Configuration microservice not yet implemented for tenant:', tenantId);
-  return [];
+  const res = await fetch(`${API_BASE_URL}/configuration/${tenantId}`, {
+    headers: {
+      'Authorization': `Bearer ${await getAuthToken()}`,
+      'Content-Type': 'application/json'
+    }
+  });
+  
+  if (!res.ok) {
+    if (res.status === 404) return [];
+    throw new Error(`Error fetching configuration: ${res.statusText}`);
+  }
+  
+  return res.json();
 }
 
 export async function updateConfiguration(
@@ -21,12 +34,24 @@ export async function updateConfiguration(
   value: any,
   userId: string
 ): Promise<void> {
-  console.log('Configuration update microservice not yet implemented');
-  throw new Error('Configuration microservice not yet implemented');
+  const res = await fetch(`${API_BASE_URL}/configuration/${tenantId}`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${await getAuthToken()}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ 
+      key,
+      value,
+      userId
+    }),
+  });
+  
+  if (!res.ok) throw new Error(`Error updating configuration: ${res.statusText}`);
 }
 
 // Helper function to get auth token
 async function getAuthToken(): Promise<string> {
-  const { data: { session } } = await supabase.auth.getSession();
-  return session?.access_token || '';
+  // In a real implementation, this would get the token from your auth context
+  return '';
 }

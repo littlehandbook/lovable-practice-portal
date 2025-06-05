@@ -1,136 +1,60 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { Session, User } from "@supabase/supabase-js";
-
-interface AuthUser {
-  id: string;
-  email: string;
-}
-
-interface AuthSession {
-  access_token: string;
-  refresh_token: string;
-}
 
 interface AuthContextType {
-  user: AuthUser | null;
-  session: AuthSession | null;
+  user: User | null;
+  session: Session | null;
   loading: boolean;
   signOut: () => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, fullName: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [session, setSession] = useState<AuthSession | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session check:', session ? 'Found session' : 'No session');
-      updateAuthState(session);
-      setLoading(false);
-    });
+    // Initialize auth state
+    const initializeAuth = async () => {
+      setLoading(true);
+      
+      // Set up auth state change listener FIRST
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        (_, session) => {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+        }
+      );
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log('Auth state changed:', _event, session ? 'Session active' : 'No session');
-      updateAuthState(session);
+      // THEN check for existing session
+      const { data: { session: initialSession } } = await supabase.auth.getSession();
+      setSession(initialSession);
+      setUser(initialSession?.user ?? null);
+      
       setLoading(false);
-    });
+      
+      return () => {
+        subscription.unsubscribe();
+      };
+    };
 
-    return () => subscription.unsubscribe();
+    initializeAuth();
   }, []);
 
-  const updateAuthState = (session: Session | null) => {
-    if (session?.user) {
-      const authUser = {
-        id: session.user.id,
-        email: session.user.email!,
-      };
-      const authSession = {
-        access_token: session.access_token,
-        refresh_token: session.refresh_token,
-      };
-      
-      setUser(authUser);
-      setSession(authSession);
-      
-      // Still store in localStorage for compatibility
-      localStorage.setItem('auth_session', JSON.stringify(authSession));
-      localStorage.setItem('auth_user', JSON.stringify(authUser));
-    } else {
-      setUser(null);
-      setSession(null);
-      localStorage.removeItem('auth_session');
-      localStorage.removeItem('auth_user');
-    }
-  };
-
-  const signIn = async (email: string, password: string) => {
-    console.log('Signing in with Supabase');
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      console.error('Sign in error:', error);
-      throw error;
-    }
-
-    console.log('Sign in successful');
-    // Auth state will be updated via the onAuthStateChange listener
-  };
-
-  const signUp = async (email: string, password: string, fullName: string) => {
-    console.log('Signing up with Supabase');
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
-      },
-    });
-
-    if (error) {
-      console.error('Sign up error:', error);
-      throw error;
-    }
-
-    console.log('Sign up successful');
-    // Auth state will be updated via the onAuthStateChange listener
-  };
-
   const signOut = async () => {
-    console.log('Signing out');
-    const { error } = await supabase.auth.signOut();
-    
-    if (error) {
-      console.error('Sign out error:', error);
-      throw error;
-    }
-
-    console.log('Sign out successful');
-    // Auth state will be updated via the onAuthStateChange listener
+    await supabase.auth.signOut();
   };
 
   const value = {
     user,
     session,
     loading,
-    signOut,
-    signIn,
-    signUp
+    signOut
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { UserPlus } from 'lucide-react';
 import { UserService } from '@/service/UserService';
-import { UserRole } from '@/types/user';
+import { UserRole } from '@/repository/UserRepository';
 import { useToast } from '@/hooks/use-toast';
 
 interface UserManagementTabProps {

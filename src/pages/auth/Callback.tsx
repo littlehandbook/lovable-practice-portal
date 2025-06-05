@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from "@/integrations/supabase/client";
 import { Spinner } from "@/components/Spinner";
 import { toast } from "@/hooks/use-toast";
 
@@ -21,27 +22,28 @@ const AuthCallback = () => {
         // If we have tokens in the URL, handle them
         if (accessToken && refreshToken && type === 'recovery') {
           console.log("Processing token-based auth...");
-          
-          // Store tokens in localStorage
-          localStorage.setItem('auth_session', JSON.stringify({
+          const { error } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken
-          }));
-          
-          // Create a basic user object (would normally be decoded from JWT)
-          const user = {
-            id: 'temp-user-id',
-            email: 'user@example.com'
-          };
-          
-          localStorage.setItem('auth_user', JSON.stringify(user));
-          
-          console.log("Session set successfully");
-          toast({
-            title: "Authentication Successful",
-            description: "You have been logged in successfully."
           });
-          navigate('/practice');
+          
+          if (error) {
+            console.error("Error setting session:", error);
+            setError(error.message);
+            toast({
+              title: "Authentication Error",
+              description: error.message,
+              variant: "destructive"
+            });
+          } else {
+            // Successfully set the session
+            console.log("Session set successfully");
+            toast({
+              title: "Authentication Successful",
+              description: "You have been logged in successfully."
+            });
+            navigate('/practice');
+          }
         } else {
           console.log("Checking for code parameter...");
           // No tokens in URL, check if there's a code parameter for OAuth or magic link
@@ -50,31 +52,37 @@ const AuthCallback = () => {
           
           if (code) {
             console.log("Found code parameter, exchanging for session...");
-            
-            // Make a request to exchange the code for tokens
-            const res = await fetch('/api/auth/exchange-code', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ code })
-            });
-            
-            if (!res.ok) {
-              throw new Error(`Code exchange failed: ${res.statusText}`);
+            try {
+              // Exchange the code for a session
+              const { error } = await supabase.auth.exchangeCodeForSession(code);
+              
+              if (error) {
+                console.error("Error exchanging code for session:", error);
+                setError(error.message);
+                toast({
+                  title: "Authentication Error",
+                  description: error.message,
+                  variant: "destructive"
+                });
+                setTimeout(() => navigate('/auth/login'), 3000);
+              } else {
+                console.log("Session exchange successful");
+                toast({
+                  title: "Authentication Successful",
+                  description: "You have been logged in successfully."
+                });
+                navigate('/practice');
+              }
+            } catch (err: any) {
+              console.error("Exception during code exchange:", err);
+              setError(err.message);
+              toast({
+                title: "Authentication Error",
+                description: err.message,
+                variant: "destructive"
+              });
+              setTimeout(() => navigate('/auth/login'), 3000);
             }
-            
-            const authData = await res.json();
-            
-            localStorage.setItem('auth_session', JSON.stringify(authData.session));
-            localStorage.setItem('auth_user', JSON.stringify(authData.user));
-            
-            console.log("Session exchange successful");
-            toast({
-              title: "Authentication Successful",
-              description: "You have been logged in successfully."
-            });
-            navigate('/practice');
           } else {
             // No authentication information found
             console.log("No auth information found, redirecting to login");

@@ -1,10 +1,11 @@
+
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { register } from "@/services/authService";
 
 interface FormData {
   email: string;
@@ -47,15 +48,73 @@ const Register = () => {
     }
 
     try {
-      console.log("Starting registration via microservice");
+      console.log("Starting registration process");
       
-      const authResponse = await register({
+      // 1. Create auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
-        fullName: formData.fullName,
-        practiceName: formData.practiceName || undefined,
-        licenseNumber: formData.licenseNumber || undefined
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: {
+            full_name: formData.fullName
+          }
+        }
       });
+
+      if (authError) {
+        console.error("Auth error:", authError);
+        throw authError;
+      }
+      
+      console.log("Auth signup successful:", authData);
+      
+      if (!authData.user) {
+        console.error("No user data returned");
+        throw new Error("Failed to create user account");
+      }
+
+      // Skip the therapist profile creation if the user already exists
+      // Supabase will handle this gracefully by returning an error message about the user existing
+      if (authData.user.identities && authData.user.identities.length === 0) {
+        console.log("User already exists, skipping profile creation");
+        
+        toast({
+          title: "Account exists",
+          description: "An account with this email already exists. Please check your email or try logging in.",
+        });
+        
+        navigate("/auth/login");
+        return;
+      }
+
+      // 2. Create therapist profile using the stored procedure
+      const { error: dbError } = await supabase.rpc(
+        'sp_register_therapist',
+        {
+          p_auth_id: authData.user.id,
+          p_email: formData.email,
+          p_full_name: formData.fullName,
+          p_practice_name: formData.practiceName || null,
+          p_license_number: formData.licenseNumber || null
+        }
+      );
+
+      if (dbError) {
+        console.error("Database error:", dbError);
+        
+        // Special handling for duplicate key error
+        if (dbError.code === '23505') {
+          toast({
+            title: "Account exists",
+            description: "An account with this email already exists. Please check your email or try logging in.",
+          });
+          navigate("/auth/login");
+          return;
+        }
+        
+        throw dbError;
+      }
 
       toast({
         title: "Registration successful",
@@ -66,9 +125,11 @@ const Register = () => {
     } catch (error: any) {
       console.error("Registration error:", error);
       
+      // User friendly error message
       let errorMessage = error.message || "Failed to create account";
       
-      if (errorMessage.includes("already registered")) {
+      // Handle specific error codes
+      if (error.code === "23505" || errorMessage.includes("already registered")) {
         errorMessage = "This email is already registered. Please try logging in instead.";
         navigate("/auth/login");
       }
