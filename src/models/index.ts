@@ -1,3 +1,4 @@
+
 // Centralized model definitions
 // TODO: These should eventually be replaced with auto-generated Supabase types
 
@@ -9,12 +10,13 @@ export interface Client {
   address?: string;
   date_of_birth?: string;
   emergency_contact?: string;
-  insurance_provider?: string;
-  insurance_id?: string;
-  notes?: string;
+  risk_score?: number;
+  risk_assessment_date?: string;
+  risk_notes?: string;
   created_at: string;
   updated_at: string;
   tenant_id?: string;
+  therapist_id: string;
   created_by?: string;
   updated_by?: string;
 }

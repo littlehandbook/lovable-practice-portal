@@ -44,7 +44,7 @@ export class ClientService {
     }
   }
 
-  static async createClient(clientData: Omit<Client, 'id' | 'created_at' | 'updated_at'>): Promise<{ data: Client | null; error: string | null }> {
+  static async createClient(clientData: Omit<Client, 'id' | 'created_at' | 'updated_at' | 'therapist_id'>): Promise<{ data: Client | null; error: string | null }> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -59,7 +59,13 @@ export class ClientService {
       const { data, error } = await supabase
         .from('tbl_clients')
         .insert({
-          ...clientData,
+          name: clientData.name,
+          email: clientData.email ?? null,
+          phone: clientData.phone ?? null,
+          address: clientData.address ?? null,
+          date_of_birth: clientData.date_of_birth ?? null,
+          emergency_contact: clientData.emergency_contact ?? null,
+          therapist_id: user.id,
           tenant_id: tenantId,
           created_by: user.id,
           updated_by: user.id
@@ -81,7 +87,7 @@ export class ClientService {
     }
   }
 
-  static async updateClient(clientId: string, clientData: Partial<Omit<Client, 'id' | 'created_at' | 'updated_at'>>): Promise<{ data: Client | null; error: string | null }> {
+  static async updateClient(clientId: string, clientData: Partial<Omit<Client, 'id' | 'created_at' | 'updated_at' | 'therapist_id'>>): Promise<{ data: Client | null; error: string | null }> {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
