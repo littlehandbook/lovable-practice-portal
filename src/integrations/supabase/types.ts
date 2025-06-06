@@ -363,6 +363,9 @@ export type Database = {
       tbl_clients: {
         Row: {
           address: string | null
+          ai_risk_rating: string | null
+          ai_risk_reasoning: string | null
+          ai_risk_score: number | null
           created_at: string
           created_by: string | null
           date_of_birth: string | null
@@ -381,6 +384,9 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          ai_risk_rating?: string | null
+          ai_risk_reasoning?: string | null
+          ai_risk_score?: number | null
           created_at?: string
           created_by?: string | null
           date_of_birth?: string | null
@@ -399,6 +405,9 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          ai_risk_rating?: string | null
+          ai_risk_reasoning?: string | null
+          ai_risk_score?: number | null
           created_at?: string
           created_by?: string | null
           date_of_birth?: string | null
@@ -756,6 +765,102 @@ export type Database = {
         }
         Relationships: []
       }
+      tbl_session_notes: {
+        Row: {
+          client_id: string
+          content: string
+          content_hash: string | null
+          created_at: string
+          created_by: string
+          id: string
+          session_id: string
+          template_id: string | null
+          tenant_id: string
+          updated_at: string
+          updated_by: string
+        }
+        Insert: {
+          client_id: string
+          content: string
+          content_hash?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          session_id: string
+          template_id?: string | null
+          tenant_id: string
+          updated_at?: string
+          updated_by: string
+        }
+        Update: {
+          client_id?: string
+          content?: string
+          content_hash?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          session_id?: string
+          template_id?: string | null
+          tenant_id?: string
+          updated_at?: string
+          updated_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_session_notes_client"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "tbl_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_session_notes_session"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "tbl_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tbl_session_notes_audit: {
+        Row: {
+          audit_id: string
+          change_hash: string | null
+          change_timestamp: string
+          changed_by: string | null
+          new_data: Json | null
+          old_data: Json | null
+          operation: string
+          row_id: string
+          table_name: string
+          tenant_id: string | null
+        }
+        Insert: {
+          audit_id?: string
+          change_hash?: string | null
+          change_timestamp?: string
+          changed_by?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
+          operation: string
+          row_id: string
+          table_name?: string
+          tenant_id?: string | null
+        }
+        Update: {
+          audit_id?: string
+          change_hash?: string | null
+          change_timestamp?: string
+          changed_by?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
+          operation?: string
+          row_id?: string
+          table_name?: string
+          tenant_id?: string | null
+        }
+        Relationships: []
+      }
       tbl_sessions: {
         Row: {
           client_id: string
@@ -1023,9 +1128,17 @@ export type Database = {
         Args: { "": string }
         Returns: number
       }
+      decrypt_session_note_content: {
+        Args: { encrypted_content: string; encryption_key: string }
+        Returns: string
+      }
       delete_role: {
         Args: { role_id: string }
         Returns: undefined
+      }
+      encrypt_session_note_content: {
+        Args: { content_text: string; encryption_key: string }
+        Returns: string
       }
       find_role_by_name: {
         Args: { role_name: string }

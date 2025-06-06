@@ -16,6 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 // Import tab components
 import { ClientOverviewTab } from '@/components/practice/ClientOverviewTab';
 import { ClientSessionHistoryTab } from '@/components/practice/ClientSessionHistoryTab';
+import { SessionNotesTab } from '@/components/practice/SessionNotesTab';
 import { ClientDocumentsTab } from '@/components/practice/ClientDocumentsTab';
 import { ClientBillingTab } from '@/components/practice/ClientBillingTab';
 import { ClientGoalsTab } from '@/components/ClientGoalsTab'; // Use the working one
@@ -139,7 +140,8 @@ const ClientDetailPage = () => {
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="goals">Goals</TabsTrigger>
-            <TabsTrigger value="sessions">Session History</TabsTrigger>
+            <TabsTrigger value="sessions">Sessions & Notes</TabsTrigger>
+            <TabsTrigger value="notes">Legacy Notes</TabsTrigger>
             <TabsTrigger value="documents">Documents</TabsTrigger>
             <TabsTrigger value="billing">Billing Info</TabsTrigger>
           </TabsList>
@@ -159,6 +161,12 @@ const ClientDetailPage = () => {
 
           <TabsContent value="sessions">
             <ClientSessionHistoryTab 
+              clientId={clientId}
+            />
+          </TabsContent>
+
+          <TabsContent value="notes">
+            <SessionNotesTab 
               clientId={clientId}
             />
           </TabsContent>

@@ -13,6 +13,9 @@ export interface Client {
   risk_score?: number;
   risk_assessment_date?: string;
   risk_notes?: string;
+  ai_risk_rating?: string;
+  ai_risk_score?: number;
+  ai_risk_reasoning?: string;
   created_at: string;
   updated_at: string;
   tenant_id?: string;
@@ -44,20 +47,23 @@ export interface Session {
   duration_minutes: number;
   session_type: string;
   status: 'scheduled' | 'completed' | 'cancelled' | 'no_show';
-  notes?: string;
+  summary_excerpt?: string;
   created_at: string;
   updated_at: string;
   tenant_id?: string;
+  created_by?: string;
+  updated_by?: string;
 }
 
 export interface SessionNote {
   id: string;
   session_id: string;
+  client_id: string;
+  template_id?: string;
   content: string;
-  note_type: 'progress' | 'treatment_plan' | 'assessment' | 'general';
-  is_private: boolean;
   created_at: string;
   updated_at: string;
+  tenant_id?: string;
   created_by: string;
   updated_by: string;
 }
