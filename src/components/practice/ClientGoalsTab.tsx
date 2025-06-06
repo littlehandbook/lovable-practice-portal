@@ -1,27 +1,42 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Target, Info, Save } from 'lucide-react';
-import { ClientGoalsWithGuidance } from '@/repository/EnhancedClientRepository';
-import { useToast } from '@/hooks/use-toast';
-import { fetchClientGoals, updateClientGoals, ClientGoals } from '@/services/clientGoalsService';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
+import { Save, Info } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ClientGoalsTabProps {
   clientId: string;
-  tenantId: string;
-  goals: ClientGoalsWithGuidance | null;
 }
 
-export const ClientGoalsTab: React.FC<ClientGoalsTabProps> = ({ 
-  clientId, 
-  tenantId,
-  goals: initialGoals 
-}) => {
+interface ClientGoals {
+  emotional_mental: string;
+  physical: string;
+  social_relational: string;
+  spiritual: string;
+  environmental: string;
+  intellectual_occupational: string;
+  financial: string;
+}
+
+const goalDescriptions = {
+  emotional_mental: "Set goals around understanding and managing feelings, building resilience, enhancing self-awareness, and fostering positive thought patterns. This area supports overall psychological well-being and coping skills.",
+  physical: "Focus on health, fitness, nutrition, sleep patterns, and physical activities that support overall wellness and vitality.",
+  social_relational: "Build meaningful relationships, improve communication skills, develop social connections, and strengthen family or romantic relationships.",
+  spiritual: "Explore personal values, meaning, purpose, faith practices, meditation, or connection to something greater than oneself.",
+  environmental: "Create supportive living and working spaces, organize surroundings, and develop sustainable lifestyle practices.",
+  intellectual_occupational: "Pursue learning opportunities, career development, skill building, creativity, and intellectual growth or professional advancement.",
+  financial: "Develop healthy money management habits, budgeting skills, financial planning, and work toward financial stability and goals."
+};
+
+export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  
   const [goals, setGoals] = useState<ClientGoals>({
     emotional_mental: '',
     physical: '',
@@ -31,61 +46,94 @@ export const ClientGoalsTab: React.FC<ClientGoalsTabProps> = ({
     intellectual_occupational: '',
     financial: ''
   });
-  const [guidance, setGuidance] = useState<Record<string, string>>({});
-  const [saving, setSaving] = useState(false);
+  
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
-  const { user } = useAuth();
+  const [saving, setSaving] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const loadGoals = async () => {
-      try {
-        if (initialGoals) {
-          setGoals({
-            emotional_mental: initialGoals.emotional_mental || '',
-            physical: initialGoals.physical || '',
-            social_relational: initialGoals.social_relational || '',
-            spiritual: initialGoals.spiritual || '',
-            environmental: initialGoals.environmental || '',
-            intellectual_occupational: initialGoals.intellectual_occupational || '',
-            financial: initialGoals.financial || ''
-          });
-          setGuidance(initialGoals.guidance || {});
-        } else {
-          const fetchedGoals = await fetchClientGoals(clientId, tenantId);
-          if (fetchedGoals) {
-            setGoals(fetchedGoals);
-          }
-        }
-      } catch (error) {
-        console.error('Error loading goals:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load client goals',
-          variant: 'destructive'
-        });
-      } finally {
-        setLoading(false);
+    fetchGoalsData();
+  }, [clientId]);
+
+  const fetchGoalsData = async () => {
+    if (!user?.id) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const { data, error } = await supabase
+        .from('tbl_client_goals')
+        .select('*')
+        .eq('client_id', clientId)
+        .eq('tenant_id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
       }
-    };
 
-    loadGoals();
-  }, [clientId, tenantId, initialGoals, toast]);
+      if (data) {
+        setGoals({
+          emotional_mental: data.emotional_mental || '',
+          physical: data.physical || '',
+          social_relational: data.social_relational || '',
+          spiritual: data.spiritual || '',
+          environmental: data.environmental || '',
+          intellectual_occupational: data.intellectual_occupational || '',
+          financial: data.financial || ''
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching goals:', err);
+      setError('Failed to load client goals');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const handleSaveGoals = async () => {
-    if (!user) return;
+  const handleGoalChange = (field: keyof ClientGoals, value: string) => {
+    setGoals(prev => ({ ...prev, [field]: value }));
+    setHasChanges(true);
+    setError(null);
+  };
+
+  const saveGoals = async () => {
+    if (!user) {
+      setError('User not authenticated');
+      return;
+    }
     
     setSaving(true);
+    setError(null);
+    
     try {
-      await updateClientGoals(clientId, tenantId, goals, user.id);
+      const { error } = await supabase
+        .from('tbl_client_goals')
+        .upsert({
+          client_id: clientId,
+          tenant_id: user.id,
+          ...goals,
+          updated_by: user.id
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      setHasChanges(false);
       toast({
         title: 'Success',
         description: 'Client goals saved successfully'
       });
-    } catch (error) {
+    } catch (err) {
+      console.error('Error saving goals:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save goals';
+      setError(errorMessage);
       toast({
         title: 'Error',
-        description: 'Failed to save client goals',
+        description: errorMessage,
         variant: 'destructive'
       });
     } finally {
@@ -93,52 +141,36 @@ export const ClientGoalsTab: React.FC<ClientGoalsTabProps> = ({
     }
   };
 
-  const handleGoalChange = (category: keyof ClientGoals, value: string) => {
-    setGoals(prev => ({ ...prev, [category]: value }));
-  };
-
-  const goalCategories = [
-    {
-      key: 'emotional_mental' as keyof ClientGoals,
-      label: 'Emotional/Mental',
-      placeholder: 'Describe emotional and mental health goals...'
-    },
-    {
-      key: 'physical' as keyof ClientGoals,
-      label: 'Physical',
-      placeholder: 'Describe physical health and wellness goals...'
-    },
-    {
-      key: 'social_relational' as keyof ClientGoals,
-      label: 'Social/Relational',
-      placeholder: 'Describe relationship and social connection goals...'
-    },
-    {
-      key: 'spiritual' as keyof ClientGoals,
-      label: 'Spiritual',
-      placeholder: 'Describe spiritual growth and meaning-making goals...'
-    },
-    {
-      key: 'environmental' as keyof ClientGoals,
-      label: 'Environmental',
-      placeholder: 'Describe living environment and community goals...'
-    },
-    {
-      key: 'intellectual_occupational' as keyof ClientGoals,
-      label: 'Intellectual/Occupational (Vocational)',
-      placeholder: 'Describe career, education, and intellectual growth goals...'
-    },
-    {
-      key: 'financial' as keyof ClientGoals,
-      label: 'Financial',
-      placeholder: 'Describe financial stability and security goals...'
-    }
-  ];
+  const renderGoalField = (key: keyof ClientGoals, label: string) => (
+    <div key={key} className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Label htmlFor={key}>{label}</Label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+              <Info className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80">
+            <p className="text-sm text-gray-700">{goalDescriptions[key]}</p>
+          </PopoverContent>
+        </Popover>
+      </div>
+      <Textarea
+        id={key}
+        value={goals[key]}
+        onChange={(e) => handleGoalChange(key, e.target.value)}
+        placeholder={`Enter ${label.toLowerCase()} goals...`}
+        disabled={saving}
+        className="min-h-[100px]"
+      />
+    </div>
+  );
 
   if (loading) {
     return (
       <Card>
-        <CardContent className="text-center py-8">
+        <CardContent className="p-6">
           <p className="text-gray-500">Loading goals...</p>
         </CardContent>
       </Card>
@@ -146,54 +178,41 @@ export const ClientGoalsTab: React.FC<ClientGoalsTabProps> = ({
   }
 
   return (
-    <TooltipProvider>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center">
-              <Target className="h-5 w-5 mr-2" />
-              Client Goals
-            </CardTitle>
-            <Button onClick={handleSaveGoals} disabled={saving} className="flex items-center gap-2">
-              <Save className="h-4 w-4" />
-              {saving ? 'Saving...' : 'Save Goals'}
-            </Button>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <CardTitle>Client Goals</CardTitle>
+        <Button
+          onClick={saveGoals}
+          disabled={!hasChanges || saving}
+          className="bg-teal-600 hover:bg-teal-700"
+        >
+          <Save className="h-4 w-4 mr-2" />
+          {saving ? 'Saving...' : 'Save Goals'}
+        </Button>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-3">
+            <p className="text-red-600 text-sm">{error}</p>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            {goalCategories.map((category) => (
-              <div key={category.key} className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Label htmlFor={category.key} className="text-sm font-medium">
-                    {category.label}
-                  </Label>
-                  {guidance[category.key] && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button type="button">
-                          <Info className="h-4 w-4 text-blue-500 hover:text-blue-700" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-sm">
-                        <p className="text-sm">{guidance[category.key]}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                </div>
-                <Textarea
-                  id={category.key}
-                  value={goals[category.key]}
-                  onChange={(e) => handleGoalChange(category.key, e.target.value)}
-                  placeholder={category.placeholder}
-                  rows={3}
-                  className="resize-none"
-                />
-              </div>
-            ))}
+        )}
+        
+        <div className="grid gap-6">
+          {renderGoalField('emotional_mental', 'Emotional/Mental')}
+          {renderGoalField('physical', 'Physical')}
+          {renderGoalField('social_relational', 'Social/Relational')}
+          {renderGoalField('spiritual', 'Spiritual')}
+          {renderGoalField('environmental', 'Environmental')}
+          {renderGoalField('intellectual_occupational', 'Intellectual/Occupational')}
+          {renderGoalField('financial', 'Financial')}
+        </div>
+        
+        {hasChanges && (
+          <div className="border-t pt-4">
+            <p className="text-sm text-orange-600">You have unsaved changes</p>
           </div>
-        </CardContent>
-      </Card>
-    </TooltipProvider>
+        )}
+      </CardContent>
+    </Card>
   );
-};
+}

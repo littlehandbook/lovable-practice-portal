@@ -44,13 +44,9 @@ export interface Homework {
   updated_at: string;
 }
 
-// Encryption key - in production this should come from secure configuration
-const ENCRYPTION_KEY = 'session_notes_encryption_key_2024';
-
 export class SessionNotesService {
   static async getSessionNotes(clientId: string): Promise<{ data: SessionNote[]; error: string | null }> {
     try {
-      // Get the raw notes from the database
       const { data: rawData, error } = await supabase
         .from('tbl_session_notes')
         .select('*')
@@ -62,7 +58,6 @@ export class SessionNotesService {
         return { data: [], error: error.message };
       }
 
-      // For now, return with placeholder content since we need the encryption functions
       const notes: SessionNote[] = (rawData || []).map(note => ({
         ...note,
         content: '[Content encrypted - decryption not yet implemented]'
@@ -88,8 +83,8 @@ export class SessionNotesService {
         return { data: null, error: 'User not authenticated' };
       }
 
-      // For now, store content as plain text in bytea format
-      const contentBuffer = new TextEncoder().encode(noteData.content);
+      // Store content as base64 encoded string to handle bytea column
+      const contentEncoded = btoa(noteData.content);
 
       const { data, error } = await supabase
         .from('tbl_session_notes')
@@ -98,7 +93,7 @@ export class SessionNotesService {
           client_id: noteData.client_id,
           tenant_id: noteData.tenant_id || user.user_metadata?.tenant_id,
           template_id: noteData.template_id,
-          content: contentBuffer,
+          content: contentEncoded,
           created_by: user.id,
           updated_by: user.id
         })
@@ -110,7 +105,6 @@ export class SessionNotesService {
         return { data: null, error: error.message };
       }
 
-      // Return the note with original content for immediate display
       return { 
         data: {
           ...data,
@@ -138,10 +132,8 @@ export class SessionNotesService {
         updated_by: user.id
       };
 
-      // If content is being updated, encode it
       if (updates.content !== undefined) {
-        const contentBuffer = new TextEncoder().encode(updates.content);
-        updateData.content = contentBuffer;
+        updateData.content = btoa(updates.content);
       }
 
       if (updates.template_id !== undefined) {
@@ -160,7 +152,6 @@ export class SessionNotesService {
         return { data: null, error: error.message };
       }
 
-      // Return with original content
       return { 
         data: {
           ...data,
@@ -232,9 +223,7 @@ export class SessionNotesService {
     }
   }
 
-  // Homework methods for HomeworkTab compatibility
   static async getHomework(clientId: string): Promise<{ data: Homework[]; error: string | null }> {
-    // Mock implementation - replace with actual homework table when created
     const mockHomework: Homework[] = [
       {
         id: '1',
@@ -246,18 +235,6 @@ export class SessionNotesService {
         client_id: clientId,
         created_at: '2024-01-15T10:00:00Z',
         updated_at: '2024-01-15T10:00:00Z'
-      },
-      {
-        id: '2',
-        title: 'Breathing Exercise Practice',
-        description: 'Practice the 4-7-8 breathing technique twice daily',
-        assigned_date: '2024-01-10',
-        due_date: '2024-01-17',
-        status: 'completed',
-        completed_at: '2024-01-16T14:30:00Z',
-        client_id: clientId,
-        created_at: '2024-01-10T09:00:00Z',
-        updated_at: '2024-01-16T14:30:00Z'
       }
     ];
 
@@ -268,7 +245,6 @@ export class SessionNotesService {
     homeworkId: string, 
     updates: Partial<Pick<Homework, 'status' | 'completed_at'>>
   ): Promise<{ data: Homework | null; error: string | null }> {
-    // Mock implementation - replace with actual homework table update when created
     console.log('Updating homework:', homeworkId, updates);
     
     return { 

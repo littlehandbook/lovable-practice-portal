@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface ClientOverview {
@@ -44,6 +43,11 @@ export interface ClientDocument {
   document_type: string;
   created_at: string;
   is_shared: boolean;
+  report_category?: string;
+  file_size?: number;
+  uploaded_by_name?: string;
+  is_shared_with_client?: boolean;
+  is_private?: boolean;
 }
 
 export class EnhancedClientRepository {
@@ -202,7 +206,12 @@ export class EnhancedClientRepository {
         file_path: doc.file_path,
         document_type: doc.document_type,
         created_at: doc.created_at,
-        is_shared: doc.is_shared_with_client
+        is_shared: doc.is_shared_with_client || false,
+        report_category: doc.report_category,
+        file_size: doc.file_size,
+        uploaded_by_name: 'Unknown', // Placeholder since we don't have user names
+        is_shared_with_client: doc.is_shared_with_client,
+        is_private: doc.is_private
       }));
     } catch (error) {
       console.error('Repository error in getClientDocuments:', error);
