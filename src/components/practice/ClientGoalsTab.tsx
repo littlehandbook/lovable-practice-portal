@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -115,6 +116,7 @@ export function ClientGoalsTab({ clientId }: ClientGoalsTabProps) {
           client_id: clientId,
           tenant_id: user.id,
           ...goals,
+          created_by: user.id,
           updated_by: user.id
         });
 
