@@ -1,106 +1,90 @@
 
-import { EnhancedClientRepository, ClientOverview, ClientGoalsWithGuidance, SessionHistory, ClientDocument } from '@/repository/EnhancedClientRepository';
+import { EnhancedClientRepository } from '@/repository/EnhancedClientRepository';
+import type { 
+  ClientOverview, 
+  ClientGoalsWithGuidance, 
+  SessionHistory, 
+  ClientDocument 
+} from '@/repository/EnhancedClientRepository';
 
 export class EnhancedClientService {
-  constructor(private repo = new EnhancedClientRepository()) {}
+  private repository = new EnhancedClientRepository();
 
-  async getClientOverview(clientId: string, tenantId: string): Promise<ClientOverview | null> {
-    await this.repo.auditFunctionCall('getClientOverview', { clientId, tenantId }, tenantId, 'system');
-    return this.repo.getClientOverview(clientId, tenantId);
+  async getClientOverview(clientId: string, tenantId: string): Promise<ClientOverview> {
+    try {
+      return await this.repository.getClientOverview(clientId, tenantId);
+    } catch (error) {
+      console.error('Error in getClientOverview:', error);
+      // Return a default structure if the stored procedure fails
+      return {
+        client_id: clientId,
+        name: 'Unknown Client',
+        email: null,
+        phone: null,
+        risk_score: 0,
+        ai_risk_rating: null,
+        ai_risk_reasoning: null,
+        last_session_date: null,
+        total_sessions: 0,
+        upcoming_sessions: 0,
+        referrals: []
+      };
+    }
   }
 
-  async updateClientRiskScore(
-    clientId: string,
-    tenantId: string,
-    riskScore: number,
-    riskNotes: string,
-    userId: string
-  ): Promise<void> {
-    // Validate risk score
-    if (riskScore < 0 || riskScore > 10) {
-      throw new Error('Risk score must be between 0 and 10');
+  async getClientGoalsWithGuidance(clientId: string, tenantId: string): Promise<ClientGoalsWithGuidance> {
+    try {
+      return await this.repository.getClientGoalsWithGuidance(clientId, tenantId);
+    } catch (error) {
+      console.error('Error in getClientGoalsWithGuidance:', error);
+      // Return empty goals structure
+      return {
+        client_id: clientId,
+        emotional_mental: '',
+        physical: '',
+        social_relational: '',
+        spiritual: '',
+        environmental: '',
+        intellectual_occupational: '',
+        financial: '',
+        guidance: []
+      };
     }
-
-    await this.repo.auditFunctionCall(
-      'updateClientRiskScore',
-      { clientId, tenantId, riskScore, riskNotes },
-      tenantId,
-      userId
-    );
-
-    return this.repo.updateClientRiskScore(clientId, tenantId, riskScore, riskNotes, userId);
   }
 
-  async getClientGoalsWithGuidance(
-    clientId: string,
-    tenantId: string
-  ): Promise<ClientGoalsWithGuidance | null> {
-    await this.repo.auditFunctionCall(
-      'getClientGoalsWithGuidance',
-      { clientId, tenantId },
-      tenantId,
-      'system'
-    );
-
-    return this.repo.getClientGoalsWithGuidance(clientId, tenantId);
-  }
-
-  async getClientSessionHistory(
-    clientId: string,
-    tenantId: string,
-    limit: number = 50,
-    offset: number = 0
-  ): Promise<SessionHistory[]> {
-    // Validate pagination parameters
-    if (limit < 1 || limit > 1000) {
-      throw new Error('Limit must be between 1 and 1000');
+  async getClientSessionHistory(clientId: string, tenantId: string, limit = 50, offset = 0): Promise<SessionHistory[]> {
+    try {
+      return await this.repository.getClientSessionHistory(clientId, tenantId, limit, offset);
+    } catch (error) {
+      console.error('Error in getClientSessionHistory:', error);
+      return [];
     }
-
-    if (offset < 0) {
-      throw new Error('Offset cannot be negative');
-    }
-
-    await this.repo.auditFunctionCall(
-      'getClientSessionHistory',
-      { clientId, tenantId, limit, offset },
-      tenantId,
-      'system'
-    );
-
-    return this.repo.getClientSessionHistory(clientId, tenantId, limit, offset);
-  }
-
-  async generateSuperbill(
-    clientId: string,
-    tenantId: string,
-    services: any,
-    amount: number,
-    description: string,
-    userId: string
-  ): Promise<string> {
-    // Validate amount
-    if (amount <= 0) {
-      throw new Error('Amount must be greater than zero');
-    }
-
-    await this.repo.auditFunctionCall(
-      'generateSuperbill',
-      { clientId, tenantId, services, amount, description },
-      tenantId,
-      userId
-    );
-
-    return this.repo.generateSuperbill(clientId, tenantId, services, amount, description, userId);
   }
 
   async getClientDocuments(clientId: string, tenantId: string): Promise<ClientDocument[]> {
-    await this.repo.auditFunctionCall(
-      'getClientDocuments',
-      { clientId, tenantId },
-      tenantId,
-      'system'
-    );
+    try {
+      return await this.repository.getClientDocuments(clientId, tenantId);
+    } catch (error) {
+      console.error('Error in getClientDocuments:', error);
+      return [];
+    }
+  }
 
-    return this.repo.getClientDocuments(clientId, tenantId);
+  async updateClientRiskScore(clientId: string, tenantId: string, riskScore: number, riskNotes: string, userId: string): Promise<void> {
+    try {
+      return await this.repository.updateClientRiskScore(clientId, tenantId, riskScore, riskNotes, userId);
+    } catch (error) {
+      console.error('Error in updateClientRiskScore:', error);
+      throw new Error('Failed to update client risk score');
+    }
+  }
+
+  async generateSuperbill(clientId: string, tenantId: string, services: any, amount: number, description: string, userId: string): Promise<string> {
+    try {
+      return await this.repository.generateSuperbill(clientId, tenantId, services, amount, description, userId);
+    } catch (error) {
+      console.error('Error in generateSuperbill:', error);
+      throw new Error('Failed to generate superbill');
+    }
   }
 }

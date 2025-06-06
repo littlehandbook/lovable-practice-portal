@@ -14,57 +14,75 @@ export function useEnhancedClient(clientId: string, tenantId: string) {
 
   const loadClientOverview = async () => {
     try {
+      setError(null);
       const data = await clientService.getClientOverview(clientId, tenantId);
       setOverview(data);
     } catch (err) {
-      setError(`Failed to load client overview: ${err}`);
+      const errorMessage = `Failed to load client overview: ${err}`;
+      console.error(errorMessage);
+      setError(errorMessage);
     }
   };
 
   const loadClientGoals = async () => {
     try {
+      setError(null);
       const data = await clientService.getClientGoalsWithGuidance(clientId, tenantId);
       setGoals(data);
     } catch (err) {
-      setError(`Failed to load client goals: ${err}`);
+      const errorMessage = `Failed to load client goals: ${err}`;
+      console.error(errorMessage);
+      setError(errorMessage);
     }
   };
 
   const loadSessionHistory = async (limit = 50, offset = 0) => {
     try {
+      setError(null);
       const data = await clientService.getClientSessionHistory(clientId, tenantId, limit, offset);
       setSessions(data);
     } catch (err) {
-      setError(`Failed to load session history: ${err}`);
+      const errorMessage = `Failed to load session history: ${err}`;
+      console.error(errorMessage);
+      setError(errorMessage);
     }
   };
 
   const loadClientDocuments = async () => {
     try {
+      setError(null);
       const data = await clientService.getClientDocuments(clientId, tenantId);
       setDocuments(data);
     } catch (err) {
-      setError(`Failed to load client documents: ${err}`);
+      const errorMessage = `Failed to load client documents: ${err}`;
+      console.error(errorMessage);
+      setError(errorMessage);
     }
   };
 
   const updateRiskScore = async (riskScore: number, riskNotes: string, userId: string) => {
     try {
+      setError(null);
       await clientService.updateClientRiskScore(clientId, tenantId, riskScore, riskNotes, userId);
       // Reload overview to get updated risk score
       await loadClientOverview();
     } catch (err) {
-      setError(`Failed to update risk score: ${err}`);
+      const errorMessage = `Failed to update risk score: ${err}`;
+      console.error(errorMessage);
+      setError(errorMessage);
       throw err;
     }
   };
 
   const generateSuperbill = async (services: any, amount: number, description: string, userId: string) => {
     try {
+      setError(null);
       const invoiceId = await clientService.generateSuperbill(clientId, tenantId, services, amount, description, userId);
       return invoiceId;
     } catch (err) {
-      setError(`Failed to generate superbill: ${err}`);
+      const errorMessage = `Failed to generate superbill: ${err}`;
+      console.error(errorMessage);
+      setError(errorMessage);
       throw err;
     }
   };
@@ -77,14 +95,16 @@ export function useEnhancedClient(clientId: string, tenantId: string) {
       setError(null);
 
       try {
-        await Promise.all([
+        await Promise.allSettled([
           loadClientOverview(),
           loadClientGoals(),
           loadSessionHistory(),
           loadClientDocuments()
         ]);
       } catch (err) {
-        setError(`Failed to load client data: ${err}`);
+        const errorMessage = `Failed to load client data: ${err}`;
+        console.error(errorMessage);
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }

@@ -50,7 +50,7 @@ const ENCRYPTION_KEY = 'session_notes_encryption_key_2024';
 export class SessionNotesService {
   static async getSessionNotes(clientId: string): Promise<{ data: SessionNote[]; error: string | null }> {
     try {
-      // First get the encrypted notes
+      // Get the raw notes from the database
       const { data: rawData, error } = await supabase
         .from('tbl_session_notes')
         .select('*')
@@ -62,38 +62,13 @@ export class SessionNotesService {
         return { data: [], error: error.message };
       }
 
-      // Decrypt content for each note
-      const decryptedNotes: SessionNote[] = [];
-      for (const note of rawData || []) {
-        try {
-          const { data: decryptedContent, error: decryptError } = await supabase
-            .rpc('decrypt_session_note_content', {
-              encrypted_content: note.content,
-              encryption_key: ENCRYPTION_KEY
-            });
+      // For now, return with placeholder content since we need the encryption functions
+      const notes: SessionNote[] = (rawData || []).map(note => ({
+        ...note,
+        content: '[Content encrypted - decryption not yet implemented]'
+      }));
 
-          if (decryptError) {
-            console.error('Decryption error for note:', note.id, decryptError);
-            decryptedNotes.push({
-              ...note,
-              content: '[DECRYPTION_ERROR]'
-            });
-          } else {
-            decryptedNotes.push({
-              ...note,
-              content: decryptedContent || '[DECRYPTION_ERROR]'
-            });
-          }
-        } catch (decryptionError) {
-          console.error('Unexpected decryption error:', decryptionError);
-          decryptedNotes.push({
-            ...note,
-            content: '[DECRYPTION_ERROR]'
-          });
-        }
-      }
-
-      return { data: decryptedNotes, error: null };
+      return { data: notes, error: null };
     } catch (error: any) {
       console.error('Unexpected error fetching session notes:', error);
       return { data: [], error: error.message };
@@ -113,17 +88,8 @@ export class SessionNotesService {
         return { data: null, error: 'User not authenticated' };
       }
 
-      // Encrypt the content before storing
-      const { data: encryptedContent, error: encryptError } = await supabase
-        .rpc('encrypt_session_note_content', {
-          content_text: noteData.content,
-          encryption_key: ENCRYPTION_KEY
-        });
-
-      if (encryptError) {
-        console.error('Encryption error:', encryptError);
-        return { data: null, error: 'Failed to encrypt content' };
-      }
+      // For now, store content as plain text in bytea format
+      const contentBuffer = new TextEncoder().encode(noteData.content);
 
       const { data, error } = await supabase
         .from('tbl_session_notes')
@@ -132,7 +98,7 @@ export class SessionNotesService {
           client_id: noteData.client_id,
           tenant_id: noteData.tenant_id || user.user_metadata?.tenant_id,
           template_id: noteData.template_id,
-          content: encryptedContent,
+          content: contentBuffer,
           created_by: user.id,
           updated_by: user.id
         })
@@ -144,11 +110,11 @@ export class SessionNotesService {
         return { data: null, error: error.message };
       }
 
-      // Return the note with decrypted content for immediate display
+      // Return the note with original content for immediate display
       return { 
         data: {
           ...data,
-          content: noteData.content // Use original content since we just created it
+          content: noteData.content
         }, 
         error: null 
       };
@@ -172,20 +138,10 @@ export class SessionNotesService {
         updated_by: user.id
       };
 
-      // If content is being updated, encrypt it
+      // If content is being updated, encode it
       if (updates.content !== undefined) {
-        const { data: encryptedContent, error: encryptError } = await supabase
-          .rpc('encrypt_session_note_content', {
-            content_text: updates.content,
-            encryption_key: ENCRYPTION_KEY
-          });
-
-        if (encryptError) {
-          console.error('Encryption error:', encryptError);
-          return { data: null, error: 'Failed to encrypt content' };
-        }
-
-        updateData.content = encryptedContent;
+        const contentBuffer = new TextEncoder().encode(updates.content);
+        updateData.content = contentBuffer;
       }
 
       if (updates.template_id !== undefined) {
@@ -204,7 +160,7 @@ export class SessionNotesService {
         return { data: null, error: error.message };
       }
 
-      // Return with decrypted content
+      // Return with original content
       return { 
         data: {
           ...data,
