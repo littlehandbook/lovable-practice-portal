@@ -30,15 +30,30 @@ export interface Session {
   updated_by?: string;
 }
 
+export interface Homework {
+  id: string;
+  title: string;
+  description?: string;
+  assigned_date: string;
+  due_date?: string;
+  status: 'pending' | 'completed' | 'overdue';
+  completed_at?: string;
+  client_id: string;
+  session_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Encryption key - in production this should come from secure configuration
 const ENCRYPTION_KEY = 'session_notes_encryption_key_2024';
 
 export class SessionNotesService {
   static async getSessionNotes(clientId: string): Promise<{ data: SessionNote[]; error: string | null }> {
     try {
-      const { data, error } = await supabase
+      // First get the encrypted notes
+      const { data: rawData, error } = await supabase
         .from('tbl_session_notes')
-        .select('*, decrypt_session_note_content(content, $1) as decrypted_content')
+        .select('*')
         .eq('client_id', clientId)
         .order('created_at', { ascending: false });
 
@@ -47,13 +62,38 @@ export class SessionNotesService {
         return { data: [], error: error.message };
       }
 
-      // Transform the data to use decrypted content
-      const transformedData = (data || []).map(note => ({
-        ...note,
-        content: note.decrypted_content || '[DECRYPTION_ERROR]'
-      }));
+      // Decrypt content for each note
+      const decryptedNotes: SessionNote[] = [];
+      for (const note of rawData || []) {
+        try {
+          const { data: decryptedContent, error: decryptError } = await supabase
+            .rpc('decrypt_session_note_content', {
+              encrypted_content: note.content,
+              encryption_key: ENCRYPTION_KEY
+            });
 
-      return { data: transformedData, error: null };
+          if (decryptError) {
+            console.error('Decryption error for note:', note.id, decryptError);
+            decryptedNotes.push({
+              ...note,
+              content: '[DECRYPTION_ERROR]'
+            });
+          } else {
+            decryptedNotes.push({
+              ...note,
+              content: decryptedContent || '[DECRYPTION_ERROR]'
+            });
+          }
+        } catch (decryptionError) {
+          console.error('Unexpected decryption error:', decryptionError);
+          decryptedNotes.push({
+            ...note,
+            content: '[DECRYPTION_ERROR]'
+          });
+        }
+      }
+
+      return { data: decryptedNotes, error: null };
     } catch (error: any) {
       console.error('Unexpected error fetching session notes:', error);
       return { data: [], error: error.message };
@@ -234,5 +274,59 @@ export class SessionNotesService {
       console.error('Unexpected error creating session:', error);
       return { data: null, error: error.message };
     }
+  }
+
+  // Homework methods for HomeworkTab compatibility
+  static async getHomework(clientId: string): Promise<{ data: Homework[]; error: string | null }> {
+    // Mock implementation - replace with actual homework table when created
+    const mockHomework: Homework[] = [
+      {
+        id: '1',
+        title: 'Daily Mood Journal',
+        description: 'Record your mood and any triggers you notice daily',
+        assigned_date: '2024-01-15',
+        due_date: '2024-01-22',
+        status: 'pending',
+        client_id: clientId,
+        created_at: '2024-01-15T10:00:00Z',
+        updated_at: '2024-01-15T10:00:00Z'
+      },
+      {
+        id: '2',
+        title: 'Breathing Exercise Practice',
+        description: 'Practice the 4-7-8 breathing technique twice daily',
+        assigned_date: '2024-01-10',
+        due_date: '2024-01-17',
+        status: 'completed',
+        completed_at: '2024-01-16T14:30:00Z',
+        client_id: clientId,
+        created_at: '2024-01-10T09:00:00Z',
+        updated_at: '2024-01-16T14:30:00Z'
+      }
+    ];
+
+    return { data: mockHomework, error: null };
+  }
+
+  static async updateHomework(
+    homeworkId: string, 
+    updates: Partial<Pick<Homework, 'status' | 'completed_at'>>
+  ): Promise<{ data: Homework | null; error: string | null }> {
+    // Mock implementation - replace with actual homework table update when created
+    console.log('Updating homework:', homeworkId, updates);
+    
+    return { 
+      data: {
+        id: homeworkId,
+        title: 'Updated Assignment',
+        assigned_date: new Date().toISOString(),
+        status: updates.status || 'pending',
+        completed_at: updates.completed_at,
+        client_id: 'mock-client-id',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }, 
+      error: null 
+    };
   }
 }
