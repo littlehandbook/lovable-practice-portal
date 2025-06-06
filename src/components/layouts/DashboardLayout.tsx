@@ -1,163 +1,168 @@
-import React, { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { useBranding } from '@/hooks/useBranding';
+
+import React, { ReactNode } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
   Calendar, 
   Users, 
   Settings, 
-  BarChart, 
+  LogOut, 
+  Home,
   Video,
-  LogOut 
+  FileText
 } from 'lucide-react';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useAuth } from '@/contexts/AuthContext';
+import { useBranding } from '@/hooks/useBranding';
+import { useToast } from '@/hooks/use-toast';
 
 interface DashboardLayoutProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const { branding } = useBranding();
-  const location = useLocation();
-  
-  const navItems = [
+  const { toast } = useToast();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to sign out',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const isActive = (path: string) => {
+    return location.pathname === path || location.pathname.startsWith(path + '/');
+  };
+
+  const menuItems = [
     { 
-      name: 'Dashboard', 
-      path: '/practice', 
-      icon: <BarChart className="w-5 h-5" /> 
+      icon: Home, 
+      label: 'Dashboard', 
+      path: '/practice/dashboard' 
     },
     { 
-      name: 'Clients', 
-      path: '/practice/clients', 
-      icon: <Users className="w-5 h-5" /> 
+      icon: Users, 
+      label: 'Clients', 
+      path: '/practice/clients' 
     },
     { 
-      name: 'Calendar', 
-      path: '/practice/calendar', 
-      icon: <Calendar className="w-5 h-5" /> 
+      icon: Calendar, 
+      label: 'Calendar', 
+      path: '/practice/calendar' 
     },
     { 
-      name: 'Telehealth', 
-      path: '/practice/telehealth', 
-      icon: <Video className="w-5 h-5" /> 
+      icon: Video, 
+      label: 'Telesession', 
+      path: '/practice/telehealth' 
     },
     { 
-      name: 'Settings', 
-      path: '/practice/settings', 
-      icon: <Settings className="w-5 h-5" /> 
-    },
+      icon: Settings, 
+      label: 'Settings', 
+      path: '/practice/settings' 
+    }
   ];
 
-  // Apply custom CSS variables for branding colors
-  useEffect(() => {
-    if (branding.primary_color && branding.secondary_color) {
-      document.documentElement.style.setProperty('--primary-color', branding.primary_color);
-      document.documentElement.style.setProperty('--secondary-color', branding.secondary_color);
-    }
-  }, [branding.primary_color, branding.secondary_color]);
-
-  const primaryColor = branding.primary_color || '#0f766e';
-  const secondaryColor = branding.secondary_color || '#14b8a6';
-  const practiceName = branding.practice_name || 'Practice Portal';
-
   return (
-    <div className="min-h-screen flex bg-gray-50">
+    <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
-      <div className="hidden md:flex md:flex-col md:w-64 bg-white border-r shadow-sm">
-        <div className="p-4 border-b">
+      <div className="w-64 bg-white shadow-sm border-r">
+        {/* Logo/Brand Section */}
+        <div className="p-6 border-b">
           <div className="flex items-center space-x-3">
             {branding.logo_url && (
               <img 
                 src={branding.logo_url} 
-                alt="Practice logo" 
-                className="h-8 w-8 object-contain flex-shrink-0"
+                alt="Practice Logo" 
+                className="h-8 w-8 object-contain"
               />
             )}
-            <h1 
-              className="text-xl font-bold truncate"
-              style={{ color: primaryColor }}
-            >
-              {practiceName}
-            </h1>
+            <div>
+              <h1 className="text-xl font-semibold text-gray-900">
+                Practice Portal
+              </h1>
+              {branding.practice_name && (
+                <p className="text-sm text-gray-500">{branding.practice_name}</p>
+              )}
+            </div>
           </div>
         </div>
-        <nav className="flex-1 overflow-y-auto p-4">
-          <ul className="space-y-2">
-            {navItems.map((item) => (
-              <li key={item.path}>
+
+        {/* Navigation */}
+        <nav className="mt-6 px-3">
+          <div className="space-y-1">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              return (
                 <Link
+                  key={item.path}
                   to={item.path}
-                  className={`flex items-center px-4 py-2 rounded-md transition-colors ${
-                    location.pathname === item.path
-                      ? 'text-gray-700'
-                      : 'hover:bg-gray-100 text-gray-700'
+                  className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    isActive(item.path)
+                      ? 'bg-teal-50 text-teal-700 border-r-2 border-teal-700'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`}
-                  style={location.pathname === item.path ? {
-                    backgroundColor: `${primaryColor}15`,
-                    color: primaryColor
-                  } : {}}
                 >
-                  {item.icon}
-                  <span className="ml-3">{item.name}</span>
+                  <Icon 
+                    className={`mr-3 h-5 w-5 ${
+                      isActive(item.path) 
+                        ? 'text-teal-500' 
+                        : 'text-gray-400 group-hover:text-gray-500'
+                    }`} 
+                  />
+                  {item.label}
                 </Link>
-              </li>
-            ))}
-          </ul>
+              );
+            })}
+          </div>
         </nav>
-        <div className="p-4 border-t">
+
+        {/* User Section */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
           <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Avatar className="h-8 w-8 mr-2">
-                <AvatarFallback 
-                  style={{ 
-                    backgroundColor: `${primaryColor}15`,
-                    color: primaryColor
-                  }}
-                >
-                  {user?.email?.charAt(0).toUpperCase() || 'T'}
+            <div className="flex items-center space-x-3">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-teal-100 text-teal-700">
+                  {user?.email?.charAt(0).toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
-              <span className="text-sm font-medium truncate max-w-[120px]">
-                {user?.email}
-              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {user?.user_metadata?.full_name || user?.email}
+                </p>
+                <p className="text-xs text-gray-500 truncate">
+                  {user?.email}
+                </p>
+              </div>
             </div>
-            <button 
-              onClick={() => signOut()} 
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSignOut}
               className="text-gray-500 hover:text-gray-700"
-              aria-label="Log out"
             >
-              <LogOut className="h-5 w-5" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Mobile Header */}
-      <div className="md:hidden fixed top-0 left-0 right-0 bg-white border-b z-10 p-4">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-3">
-            {branding.logo_url && (
-              <img 
-                src={branding.logo_url} 
-                alt="Practice logo" 
-                className="h-6 w-6 object-contain flex-shrink-0"
-              />
-            )}
-            <h1 
-              className="text-xl font-bold truncate"
-              style={{ color: primaryColor }}
-            >
-              {practiceName}
-            </h1>
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        <main className="flex-1 p-4 md:p-8 pt-16 md:pt-8 overflow-y-auto">
-          {children}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex-1 overflow-auto">
+          <div className="p-6">
+            {children}
+          </div>
         </main>
       </div>
     </div>
