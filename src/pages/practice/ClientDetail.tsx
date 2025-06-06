@@ -15,7 +15,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 // Import tab components
 import { ClientOverviewTab } from '@/components/practice/ClientOverviewTab';
-import { ClientSessionHistoryTab } from '@/components/practice/ClientSessionHistoryTab';
+import { CombinedSessionNotesTab } from '@/components/practice/CombinedSessionNotesTab';
 import { ClientDocumentsTab } from '@/components/practice/ClientDocumentsTab';
 import { ClientBillingTab } from '@/components/practice/ClientBillingTab';
 import { ClientGoalsTab } from '@/components/ClientGoalsTab'; // Use the working one
@@ -158,7 +158,7 @@ const ClientDetailPage = () => {
           </TabsContent>
 
           <TabsContent value="sessions">
-            <ClientSessionHistoryTab 
+            <CombinedSessionNotesTab 
               clientId={clientId}
             />
           </TabsContent>

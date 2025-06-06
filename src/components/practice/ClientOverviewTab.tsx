@@ -201,26 +201,16 @@ export const ClientOverviewTab: React.FC<ClientOverviewTabProps> = ({
         </CardContent>
       </Card>
 
-      {/* Risk Assessment */}
+      {/* AI Risk Assessment */}
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle className="flex items-center">
-              <Shield className="h-5 w-5 mr-2" />
-              Risk Assessment
-            </CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsEditingRisk(!isEditingRisk)}
-            >
-              {isEditingRisk ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
-            </Button>
-          </div>
+          <CardTitle className="flex items-center">
+            <Bot className="h-5 w-5 mr-2" />
+            AI Risk Assessment
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* AI Risk Assessment */}
             <div className="space-y-2">
               <Label className="font-medium flex items-center">
                 <Bot className="h-4 w-4 mr-1" />
@@ -240,7 +230,57 @@ export const ClientOverviewTab: React.FC<ClientOverviewTabProps> = ({
               )}
             </div>
 
-            {/* Practitioner Risk Assessment */}
+            <div className="space-y-2">
+              <Label className="font-medium">AI Risk Score</Label>
+              <Badge className={getRiskScoreColor(client.ai_risk_score || 0)}>
+                {client.ai_risk_score || 0}/10
+              </Badge>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="font-medium">Last Assessment</Label>
+              <p className="text-sm text-gray-600">
+                {client.risk_assessment_date 
+                  ? new Date(client.risk_assessment_date).toLocaleDateString()
+                  : 'Never assessed'
+                }
+              </p>
+            </div>
+          </div>
+
+          {client.ai_risk_reasoning && (
+            <div className="mt-4 space-y-2">
+              <Label className="font-medium flex items-center">
+                <Bot className="h-4 w-4 mr-1" />
+                AI Risk Reasoning
+              </Label>
+              <div className="bg-blue-50 p-3 rounded-lg">
+                <p className="text-sm text-gray-700">{client.ai_risk_reasoning}</p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Risk Assessment */}
+      <Card>
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle className="flex items-center">
+              <Shield className="h-5 w-5 mr-2" />
+              Practitioner Risk Assessment
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditingRisk(!isEditingRisk)}
+            >
+              {isEditingRisk ? <X className="h-4 w-4" /> : <Edit className="h-4 w-4" />}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="font-medium">Practitioner Risk Score</Label>
               {isEditingRisk ? (
@@ -259,7 +299,6 @@ export const ClientOverviewTab: React.FC<ClientOverviewTabProps> = ({
               )}
             </div>
 
-            {/* Risk Assessment Date */}
             <div className="space-y-2">
               <Label className="font-medium">Last Assessment</Label>
               <p className="text-sm text-gray-600">
@@ -271,20 +310,6 @@ export const ClientOverviewTab: React.FC<ClientOverviewTabProps> = ({
             </div>
           </div>
 
-          {/* AI Risk Reasoning */}
-          {client.ai_risk_reasoning && (
-            <div className="mt-4 space-y-2">
-              <Label className="font-medium flex items-center">
-                <Bot className="h-4 w-4 mr-1" />
-                AI Risk Reasoning
-              </Label>
-              <div className="bg-blue-50 p-3 rounded-lg">
-                <p className="text-sm text-gray-700">{client.ai_risk_reasoning}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Risk Notes */}
           <div className="mt-4 space-y-2">
             <Label className="font-medium">Risk Notes</Label>
             {isEditingRisk ? (
